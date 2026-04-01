@@ -4,80 +4,59 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+    <div class="chat-window">
+        <header class="header">
+            <a href="/settings" class="back-btn">←</a>
+            <img id="h-avatar" class="avatar" style="width:40px; height:40px;">
+            <div style="flex:1"><b id="h-name">Nombre</b><br><small>en línea</small></div>
+        </header>
 
-<div class="chat-window">
-    <header class="chat-header">
-        <a href="/settings" class="back-btn">←</a>
-        <div class="user-avatar">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-        </div>
-        <div class="selected-user-info">
-            <span id="chat-name">Nombre</span>
-            <small id="chat-id">en línea</small>
-        </div>
-    </header>
+        <div class="messages-container" id="msgs"></div>
 
-    <div class="messages-container" id="log-display">
-        </div>
+        <footer class="input-area">
+            <div class="input-card">
+                <span>😊</span>
+                <textarea id="msg-input" placeholder="Mensaje" rows="1"></textarea>
+                <span>📎</span>
+            </div>
+            <button id="send-btn" onclick="send()">➤</button>
+        </footer>
+    </div>
 
-    <footer class="input-area">
-        <div class="input-container">
-            <span class="icon-btn">😊</span>
-            <input type="hidden" id="current-id">
-            <textarea id="msg-input" placeholder="Mensaje" rows="1"></textarea>
-            <span class="icon-btn">📎</span>
-            <span class="icon-btn">📷</span>
-        </div>
-        <button onclick="sendMessage()" id="send-btn">
-            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
-        </button>
-    </footer>
-</div>
+    <script>
+        const chatId = localStorage.getItem("selectedChatId");
+        const chatName = localStorage.getItem("selectedChatName");
 
-<script>
-    // Conserva la misma lógica de JavaScript que tenías antes
-    // Solo asegúrate de llamar a initChat() al cargar
-    async function fetchData() {
-        const res = await fetch("/logs");
-        const data = await res.json();
-        const display = document.getElementById("log-display");
-        const activeId = document.getElementById("current-id").value;
-        
-        const filtered = data.logs.filter(line => line.startsWith(activeId + "|"));
-        display.innerHTML = filtered.map(line => {
-            const msg = line.split(': ')[1] || "";
-            return `<div class="msg-row"><div class="msg-bubble">${msg}</div></div>`;
-        }).join("");
-        display.scrollTop = display.scrollHeight;
-    }
-
-    async function sendMessage() {
-        const id = document.getElementById("current-id").value;
-        const input = document.getElementById("msg-input");
-        if(!id || !input.value.trim()) return;
-        await fetch("/send", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({id, msg: input.value})
-        });
-        input.value = "";
-        fetchData();
-    }
-
-    window.onload = () => {
-        const savedId = localStorage.getItem("selectedChatId");
-        const savedName = localStorage.getItem("selectedChatName");
-        if(savedId){
-            document.getElementById("current-id").value = savedId;
-            document.getElementById("chat-name").innerText = savedName;
+        async function fetchMsgs() {
+            const res = await fetch("/logs");
+            const data = await res.json();
+            const filtered = data.logs.filter(l => l.startsWith(chatId + "|"));
+            document.getElementById("msgs").innerHTML = filtered.map(l => `
+                <div class="msg-row"><div class="msg-bubble">${l.split(': ')[1]}</div></div>
+            `).join('');
+            const d = document.getElementById("msgs"); d.scrollTop = d.scrollHeight;
         }
-        fetchData();
-        setInterval(fetchData, 3000);
-    };
-</script>
 
+        async function send() {
+            const input = document.getElementById("msg-input");
+            if(!input.value.trim()) return;
+            await fetch("/send", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({id: chatId, msg: input.value})
+            });
+            input.value = ""; fetchMsgs();
+        }
+
+        window.onload = () => {
+            if(!chatId) return window.location.href="/settings";
+            document.getElementById("h-name").innerText = chatName;
+            document.getElementById("h-avatar").src = `/static/avatars/${chatId}.jpg`;
+            fetchMsgs(); setInterval(fetchMsgs, 3000);
+        }
+    </script>
 </body>
 </html>
