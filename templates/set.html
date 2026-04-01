@@ -1,35 +1,88 @@
-<link rel="stylesheet" href="/static/style.css">
-<div class="header"><b>SET TELEGRAM</b></div>
-<div class="tabs">
-    <button class="active" onclick="location.href='/settings'">TELEGRAM</button>
-    <button onclick="location.href='/setig'">INSTAGRAM</button>
-</div>
-<div id="lista" class="list-container"></div>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISTEMA OMEGA - SELECTOR</title>
+    <link rel="stylesheet" href="/static/set_style.css">
+</head>
+<body>
+    <div class="scanline"></div>
+    <header>
+        <div class="status-bar">
+            <span>SISTEMA: ONLINE</span>
+            <span id="clock">00:00:00</span>
+        </div>
+        <h1>CORE_SELECTOR_v7</h1>
+    </header>
 
-<script>
-    async function cargar() {
-        const res = await fetch("/logs");
-        const data = await res.json();
-        const box = document.getElementById("lista");
-        let users = {};
+    <div class="tabs">
+        <button class="tab-btn active" onclick="filterPlat('TG')">TELEGRAM</button>
+        <button class="tab-btn" onclick="filterPlat('IG')">INSTAGRAM</button>
+    </div>
 
-        data.logs.forEach(line => {
-            const [plat, user, msg, hora] = line.split('|');
-            if(plat === "TG" && user !== "YO") {
-                const [id, name] = user.split(':');
-                users[id] = {name, msg, hora};
+    <div id="chat-list" class="chat-list">
+        <div class="loading">ESCANEANDO FRECUENCIAS...</div>
+    </div>
+
+    <script>
+        let currentPlat = 'TG';
+
+        function filterPlat(plat) {
+            currentPlat = plat;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            loadChats();
+        }
+
+        async function loadChats() {
+            try {
+                const res = await fetch('/get_logs'); // Asegúrate que tu server.py tenga esta ruta
+                const data = await res.text();
+                const lines = data.trim().split('\n');
+                const chatList = document.getElementById('chat-list');
+                const uniqueChats = {};
+
+                lines.forEach(line => {
+                    const [plat, user, msg, hora] = line.split('|');
+                    if (plat === currentPlat && user !== "YO") {
+                        uniqueChats[user] = { msg, hora };
+                    }
+                });
+
+                chatList.innerHTML = '';
+                Object.keys(uniqueChats).reverse().forEach(user => {
+                    const [id, name] = user.split(':');
+                    const item = document.createElement('div');
+                    item.className = 'chat-card';
+                    item.onclick = () => window.location.href = `/chat/${currentPlat}/${id}`;
+                    item.innerHTML = `
+                        <div class="card-info">
+                            <span class="user-name">${name || 'Usuario Desconocido'}</span>
+                            <span class="user-id">ID: ${id}</span>
+                            <p class="last-msg">${uniqueChats[user].msg.substring(0, 30)}...</p>
+                        </div>
+                        <span class="chat-time">${uniqueChats[user].hora}</span>
+                    `;
+                    chatList.appendChild(item);
+                });
+
+                if (Object.keys(uniqueChats).length === 0) {
+                    chatList.innerHTML = `<div class="empty">NO HAY CHATS ACTIVOS EN ${currentPlat}</div>`;
+                }
+            } catch (e) {
+                console.error("Error cargando chats", e);
             }
-        });
+        }
 
-        box.innerHTML = Object.entries(users).map(([id, u]) => `
-            <div class="card" onclick="openChat('${id}','${u.name}')">
-                <b>${u.name}</b><br><small>${u.msg}</small>
-            </div>
-        `).join('');
-    }
-    function openChat(id, name) {
-        localStorage.setItem("cid", id); localStorage.setItem("cname", name);
-        window.location.href="/chatelegram";
-    }
-    cargar(); setInterval(cargar, 5000);
-</script>
+        // Reloj y Auto-Update
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString();
+        }, 1000);
+
+        setInterval(loadChats, 3000);
+        loadChats();
+    </script>
+</body>
+</html>
