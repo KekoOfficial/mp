@@ -1,128 +1,76 @@
-import os
-import json
-import sqlite3
-import datetime
-import threading
-import subprocess
-from flask import Flask, render_template, request, jsonify, send_from_directory
-from config import (
-    LOG_FILE, QUEUE_FILE, DB_PATH, AUTH_TOKEN, 
-    WEB_HOST, WEB_PORT, SUBDOMAIN_LT, MEDIA_DIR
-)
+from flask import Flask, render_template, request, jsonify, redirect, session, url_for
+import os, json, datetime, sqlite3, threading, subprocess
+from config import *
 
 app = Flask(__name__)
-
-# --- MIDDLEWARE DE SEGURIDAD ---
-def check_auth(token):
-    return token == AUTH_TOKEN
+app.secret_key = "IMP_SECRET_KEY_2026"
 
 # ==========================================
-# 🌐 GESTIÓN DE TÚNEL GLOBAL (LOCAL TUNNEL)
+# 🗄️ GESTIÓN DE USUARIOS (SQLITE)
 # ==========================================
-def start_global_tunnel():
-    """Lanza el túnel para acceso desde el extranjero en un hilo aparte."""
-    def run():
-        print(f"\n🌍 [TUNEL] Intentando abrir acceso global en puerto {WEB_PORT}...")
-        try:
-            # Requiere: npm install -g localtunnel
-            command = f"lt --port {WEB_PORT} --subdomain {SUBDOMAIN_LT}"
-            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            for line in iter(process.stdout.readline, b''):
-                print(f"🔗 [ENLACE PÚBLICO] {line.decode('utf-8').strip()}")
-        except Exception as e:
-            print(f"❌ Error al iniciar el túnel: {e}")
-
-    threading.Thread(target=run, daemon=True).start()
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('CREATE TABLE IF NOT EXISTS admins (id INTEGER PRIMARY KEY, user TEXT UNIQUE, pass TEXT)')
+    # Crear los 10 slots si está vacío (Usuario: admin1...admin10, Pass: 1234)
+    cursor.execute('SELECT COUNT(*) FROM admins')
+    if cursor.fetchone()[0] == 0:
+        for i in range(1, 11):
+            cursor.execute('INSERT INTO admins (user, pass) VALUES (?, ?)', (f'admin{i}', '1234'))
+    conn.commit()
+    conn.close()
 
 # ==========================================
-# 🛠️ RUTAS DEL SISTEMA (ENDPOINTS)
+# 🌐 TUNEL Y RUTAS
 # ==========================================
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        u, p = request.form.get('username'), request.form.get('password')
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute('SELECT * FROM admins WHERE user=? AND pass=?', (u, p))
+        user = c.fetchone()
+        conn.close()
+        if user:
+            session['admin'] = u
+            return redirect(url_for('selector'))
+        return "❌ CREDENCIALES INVÁLIDAS"
+    return render_template('login.html')
 
 @app.route('/')
-def home():
-    auth = request.args.get('auth')
-    if not check_auth(auth):
-        return "🚫 ACCESO NO AUTORIZADO", 403
-    return render_template('set.html', auth=auth)
+def selector():
+    if 'admin' not in session: return redirect(url_for('login'))
+    return render_template('set.html', admin=session['admin'])
 
-@app.route('/chat/<plat>/<chat_id>')
-def chat_room(plat, chat_id):
-    auth = request.args.get('auth')
-    if not check_auth(auth):
-        return "🚫 SESIÓN EXPIRADA", 403
-    return render_template('index.html', plat=plat, chat_id=chat_id, auth=auth)
+@app.route('/chat/<id>')
+def chat(id):
+    if 'admin' not in session: return redirect(url_for('login'))
+    return render_template('index.html', chat_id=id)
 
 @app.route('/get_logs')
 def get_logs():
-    auth = request.args.get('auth')
-    if not check_auth(auth): return "Error", 401
-    
     if os.path.exists(LOG_FILE):
-        with open(LOG_FILE, 'r', encoding='utf-8') as f:
-            return f.read()
+        with open(LOG_FILE, 'r', encoding='utf-8') as f: return f.read()
     return ""
 
 @app.route('/send_msg', methods=['POST'])
 def send_msg():
     data = request.json
-    # Validación de datos de entrada
-    if not data or 'msg' not in data or 'id' not in data:
-        return jsonify({"status": "error", "message": "Datos incompletos"}), 400
+    nueva_tarea = {"id": str(data['id']), "msg": data['msg'], "plat": "TG", "admin": session.get('admin')}
+    cola = []
+    if os.path.exists(QUEUE_FILE):
+        with open(QUEUE_FILE, 'r') as f:
+            try: cola = json.load(f)
+            except: cola = []
+    cola.append(nueva_tarea)
+    with open(QUEUE_FILE, 'w') as f: json.dump(cola, f)
+    return jsonify({"status": "success"})
 
-    try:
-        nueva_tarea = {
-            "id": str(data['id']),
-            "msg": data['msg'],
-            "plat": data.get('plat', 'TG'),
-            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-
-        # Manejo de cola con bloqueo simple para evitar corrupción
-        cola = []
-        if os.path.exists(QUEUE_FILE):
-            with open(QUEUE_FILE, 'r') as f:
-                try:
-                    cola = json.load(f)
-                except: cola = []
-
-        cola.append(nueva_tarea)
-
-        with open(QUEUE_FILE, 'w') as f:
-            json.dump(cola, f, indent=4)
-
-        return jsonify({"status": "success", "info": "Enviado a cola de salida"})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-# Servir archivos multimedia (Fotos/Videos)
-@app.route('/static/media/<path:filename>')
-def serve_media(filename):
-    return send_from_directory(MEDIA_DIR, filename)
-
-# ==========================================
-# 📊 MONITOR DE SALUD (API)
-# ==========================================
-@app.route('/api/status')
-def system_status():
-    import psutil
-    return jsonify({
-        "cpu": f"{psutil.cpu_percent()}%",
-        "ram": f"{psutil.virtual_memory().percent}%",
-        "uptime": str(datetime.datetime.now().strftime("%H:%M:%S")),
-        "db_size": f"{os.path.getsize(DB_PATH) / 1024:.2f} KB" if os.path.exists(DB_PATH) else "0 KB"
-    })
-
-# ==========================================
-# 🏁 ARRANQUE MAESTRO
-# ==========================================
 if __name__ == '__main__':
-    # 1. Iniciar acceso internacional
-    start_global_tunnel()
-
-    print("\n" + "="*40)
-    print("💎 MPSERVER TITANIUM v7.0 - ONLINE")
-    print(f"📡 IP LOCAL: http://localhost:{WEB_PORT}?auth={AUTH_TOKEN}")
-    print("="*40 + "\n")
-
-    # 2. Correr App Flask (Multihilo para soportar varios usuarios)
-    app.run(host=WEB_HOST, port=WEB_PORT, debug=False, threaded=True)
+    init_db()
+    # Iniciar túnel en hilo aparte
+    def run_lt():
+        subprocess.Popen(f"lt --port 5000 --subdomain imperio-imp-v8", shell=True)
+    threading.Thread(target=run_lt, daemon=True).start()
+    app.run(host='0.0.0.0', port=5000)
