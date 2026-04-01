@@ -2,64 +2,52 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MPSERVER_NET | SELECTOR</title>
+    <title>MPSERVER | SELECTOR V10</title>
     <link rel="stylesheet" href="/static/set.css">
 </head>
 <body>
-    <div class="scanline"></div>
     <div class="header">
-        <div class="glitch" data-text="TITAN_CORE_V10">TITAN_CORE_V10</div>
-        <div class="op-tag">OPERADOR: {{ user }}</div>
+        <div class="glitch">IMPERIO_IMP_V10</div>
+        <div class="status">OPERADOR: {{ user }} | GLOBAL_LINK: ACTIVE</div>
     </div>
 
-    <div id="chat-container" class="chat-list">
-        <div class="loading">SINCRONIZANDO FRECUENCIAS...</div>
-    </div>
+    <div id="chat-list" class="container">
+        </div>
 
     <script>
-        async function updateChats() {
+        async function loadChats() {
             try {
-                const r = await fetch('/api/stream?t=' + Date.now());
+                const r = await fetch('/api/logs?t=' + Date.now());
                 const data = await r.text();
-                const container = document.getElementById('chat-container');
-                const unique = {};
+                const list = document.getElementById('chat-list');
+                const users = {};
 
                 data.trim().split('\n').forEach(line => {
-                    const [plat, user, msg, hora, side] = line.split('|');
-                    if (side === "IN") {
-                        unique[user] = { msg, hora };
+                    const parts = line.split('|');
+                    if (parts.length >= 5) {
+                        const [plat, info, msg, hora, side] = parts;
+                        if (side === "IN") {
+                            users[info] = { msg, hora };
+                        }
                     }
                 });
 
-                container.innerHTML = '';
-                const keys = Object.keys(unique).reverse();
-                
-                if (keys.length === 0) {
-                    container.innerHTML = '<div class="empty">ESPERANDO SEÑAL ENTRANTE...</div>';
-                    return;
-                }
-
-                keys.forEach(u => {
+                list.innerHTML = '';
+                Object.keys(users).reverse().forEach(u => {
                     const [id, name] = u.split(':');
-                    container.innerHTML += `
+                    list.innerHTML += `
                         <div class="chat-card" onclick="location.href='/chat/${id}'">
-                            <div class="card-glow"></div>
                             <div class="info">
-                                <span class="name">${name || 'DESCONOCIDO'}</span>
-                                <span class="id">ID: ${id}</span>
-                                <p class="last-msg">${unique[u].msg.substring(0, 40)}...</p>
+                                <span class="name">${name}</span>
+                                <span class="last-msg">${users[u].msg.substring(0, 30)}...</span>
                             </div>
-                            <div class="meta">
-                                <span class="time">${unique[u].hora}</span>
-                                <div class="status-dot pulse"></div>
-                            </div>
+                            <div class="meta">${users[u].hora}</div>
                         </div>`;
                 });
-            } catch (e) { console.error("Sync Error", e); }
+            } catch (e) { console.log("Error sync..."); }
         }
-        setInterval(updateChats, 1500);
-        updateChats();
+        setInterval(loadChats, 2000);
+        loadChats();
     </script>
 </body>
 </html>
