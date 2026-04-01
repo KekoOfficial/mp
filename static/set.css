@@ -1,64 +1,190 @@
-body {
-    background: #0f0f0f;
-    color: white;
-    font-family: Arial, sans-serif;
+:root {
+    --wa-bg: #0b141a;
+    --wa-text: #e9edef;
+    --wa-text-dim: #8696a0;
+    --wa-green: #25d366;
+    --wa-filter-bg: #202d33;
+    --wa-search-bg: #202d33;
+}
+
+body, html {
+    margin: 0; padding: 0;
+    background-color: var(--wa-bg);
+    color: var(--wa-text);
+    font-family: 'Segoe UI', Helvetica, sans-serif;
+    height: 100%;
+}
+
+.app-container {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    height: 100vh;
 }
 
-.settings-container {
-    width: 100%;
-    max-width: 500px;
-    padding: 20px;
-}
-
-.header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 30px;
-}
-
-.nav-btn {
-    text-decoration: none;
-    font-size: 1.5rem;
-    margin-right: 20px;
-}
-
-.section {
-    background: #1a1a1a;
-    padding: 20px;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    border: 1px solid #333;
-}
-
-.selector-item {
-    padding: 15px;
-    background: #252525;
-    margin-bottom: 10px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: 0.3s;
-    border: 1px solid transparent;
-}
-
-.selector-item:hover {
-    border-color: #00ff88;
-    background: #2a2a2a;
-}
-
-.selector-item strong {
-    display: block;
-    color: #00ff88;
-}
-
-.status-card p {
+/* HEADER */
+.main-header {
+    padding: 15px 16px;
     display: flex;
     justify-content: space-between;
-    border-bottom: 1px solid #333;
-    padding: 5px 0;
+    align-items: center;
 }
 
-.status-card span {
+.main-header h1 {
+    font-size: 1.5rem;
+    margin: 0;
+    font-weight: 500;
+}
+
+.header-icons {
+    display: flex;
+    gap: 20px;
+    font-size: 1.2rem;
+}
+
+/* BUSCADOR */
+.search-container {
+    padding: 10px 16px;
+}
+
+.search-bar {
+    background: var(--wa-search-bg);
+    border-radius: 25px;
+    padding: 8px 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.search-bar input {
+    background: transparent;
+    border: none;
+    color: white;
+    width: 100%;
+    outline: none;
+}
+
+/* FILTROS */
+.filters-container {
+    padding: 10px 16px;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+}
+
+.filter-btn {
+    background: var(--wa-filter-bg);
+    border: none;
+    color: var(--wa-text-dim);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.filter-btn.active {
+    background: #004a3a;
     color: #00ff88;
+}
+
+/* LISTA DE CHATS */
+.chat-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.chat-item {
+    display: flex;
+    padding: 12px 16px;
+    gap: 15px;
+    cursor: pointer;
+}
+
+.chat-item:active { background-color: #1a2226; }
+
+.avatar-circle {
+    width: 52px;
+    height: 52px;
+    background: #3b4a54;
+    border-radius: 50%;
+}
+
+.chat-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-bottom: 0.1px solid rgba(134, 150, 160, 0.1);
+    padding-bottom: 12px;
+}
+
+.chat-top {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.chat-name {
+    font-weight: 500;
+    font-size: 1.05rem;
+}
+
+.chat-time {
+    font-size: 0.75rem;
+    color: var(--wa-text-dim);
+}
+
+.chat-msg {
+    font-size: 0.9rem;
+    color: var(--wa-text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 250px;
+}
+
+/* NAV INFERIOR */
+.bottom-nav {
+    display: flex;
+    background: #121b22;
+    padding: 10px 0;
+    border-top: 0.1px solid #222;
+}
+
+.nav-item {
+    flex: 1;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--wa-text-dim);
+    font-size: 0.8rem;
+}
+
+.nav-item.active {
+    color: var(--wa-text);
+}
+
+.nav-item.active .nav-icon {
+    background: #004a3a;
+    color: white;
+    border-radius: 20px;
+    padding: 2px 20px;
+}
+
+/* BOTÓN FLOTANTE */
+.fab {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    background: var(--wa-green);
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    color: #0b141a;
+    font-size: 1.5rem;
 }
