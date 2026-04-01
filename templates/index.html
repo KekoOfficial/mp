@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TELEGRAM PANEL PRO</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="header">🔥 TELEGRAM PANEL PRO</div>
+
+<div class="container">
+    <div class="left">
+        <h3>Enviar Mensaje</h3>
+        <input id="id" type="text" placeholder="ID usuario / grupo">
+        <textarea id="msg" placeholder="Escribe tu mensaje aquí..."></textarea>
+        <button onclick="send()">ENVIAR AHORA</button>
+    </div>
+
+    <div class="right">
+        <h3>Logs Recientes</h3>
+        <div class="log" id="log"></div>
+    </div>
+</div>
+
+<script>
+async function send(){
+    const id = document.getElementById("id").value;
+    const msg = document.getElementById("msg").value;
+
+    if(!id || !msg) return alert("Rellena todos los campos");
+
+    await fetch("/send", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({id, msg})
+    });
+
+    document.getElementById("msg").value = "";
+    loadLogs();
+}
+
+async function loadLogs(){
+    try {
+        const res = await fetch("/logs");
+        const data = await res.json();
+        const log Div = document.getElementById("log");
+        
+        logDiv.innerHTML = data.logs.join("<br>");
+        logDiv.scrollTop = logDiv.scrollHeight;
+    } catch (e) {
+        console.error("Error cargando logs");
+    }
+}
+
+setInterval(loadLogs, 2000);
+window.onload = loadLogs;
+</script>
+
+</body>
+</html>
