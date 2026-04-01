@@ -2,30 +2,62 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>CONFIGURACIÓN | PANEL</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Configuración | Panel</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='set.css') }}">
 </head>
 <body>
     <div class="settings-container">
         <header class="header">
             <a href="/" class="nav-btn">◀️</a>
-            <h1>CONFIGURACIÓN</h1>
+            <h1>AJUSTES Y CHATS</h1>
         </header>
-        
-        <div class="settings-content">
-            <div class="card">
-                <h3>Información del Bot</h3>
-                <p>Estado: <span style="color: #00ff88;">En línea</span></p>
-                <button class="btn-danger" onclick="location.reload()">Reiniciar Conexión</button>
+
+        <section class="section">
+            <h3>Seleccionar Chat Activo</h3>
+            <div id="chat-selector-list" class="selector-list">
+                <p>Cargando lista de contactos...</p>
             </div>
-            
-            <div class="card">
-                <h3>Personalización</h3>
-                <label>Nombre del Panel</label>
-                <input type="text" value="Telegram Pro Panel">
-                <button onclick="alert('Guardado')">Guardar Cambios</button>
+        </section>
+
+        <section class="section">
+            <h3>Estado del Sistema</h3>
+            <div class="status-card">
+                <p>Servidor: <span>Activo</span></p>
+                <p>Bot: <span>Online</span></p>
             </div>
-        </div>
+        </section>
     </div>
+
+    <script>
+        async function loadSelector() {
+            const res = await fetch("/logs");
+            const data = await res.json();
+            const listDiv = document.getElementById("chat-selector-list");
+            const uniqueUsers = {};
+
+            data.logs.forEach(line => {
+                const [id, rest] = line.split('|');
+                if(rest) {
+                    const name = rest.split(':')[0];
+                    uniqueUsers[id] = name;
+                }
+            });
+
+            listDiv.innerHTML = "";
+            for (const [id, name] of Object.entries(uniqueUsers)) {
+                const item = document.createElement("div");
+                item.className = "selector-item";
+                item.onclick = () => {
+                    // GUARDAR Y REDIRIGIR
+                    localStorage.setItem("selectedChatId", id);
+                    localStorage.setItem("selectedChatName", name);
+                    window.location.href = "/";
+                };
+                item.innerHTML = `<strong>${name}</strong> <small>ID: ${id}</small>`;
+                listDiv.appendChild(item);
+            }
+        }
+        window.onload = loadSelector;
+    </script>
 </body>
 </html>
