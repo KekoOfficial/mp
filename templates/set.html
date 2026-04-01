@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>CONFIGURACIÓN | PANEL</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="settings-container">
+        <header class="header">
+            <a href="/" class="nav-btn">◀️</a>
+            <h1>CONFIGURACIÓN</h1>
+        </header>
+        
+        <div class="settings-content">
+            <div class="card">
+                <h3>Información del Bot</h3>
+                <p>Estado: <span style="color: #00ff88;">En línea</span></p>
+                <button class="btn-danger" onclick="location.reload()">Reiniciar Conexión</button>
+            </div>
+            
+            <div class="card">
+                <h3>Personalización</h3>
+                <label>Nombre del Panel</label>
+                <input type="text" value="Telegram Pro Panel">
+                <button onclick="alert('Guardado')">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
