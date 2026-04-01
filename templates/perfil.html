@@ -1,17 +1,25 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/static/style.css">
+    <title>Perfil | MpServer</title>
 </head>
 <body>
     <header class="header">
-        <a href="/settings" class="back-btn">←</a>
-        <h2 style="margin:0;">Perfil</h2>
+        <span onclick="location.href='/settings'" style="cursor:pointer; font-size:1.5rem;">◀</span>
+        <div class="brand-name" style="margin-left:20px">MI PERFIL</div>
     </header>
     <main style="padding:20px; text-align:center;">
-        <div style="width:150px; height:150px; background:#3b4a54; border-radius:50%; margin:20px auto;"></div>
-        <h3>Configuración de Usuario</h3>
-        <p style="color:var(--wa-text-dim)">Esta página estará lista pronto.</p>
+        <div style="width:120px; height:120px; background:#111; border:2px solid var(--mp-accent); border-radius:20px; margin:20px auto; display:flex; align-items:center; justify-content:center; font-size:3rem;">👤</div>
+        <h2 style="color:var(--mp-accent)">Noa Dev</h2>
+        <p style="color:var(--mp-text-dim)">"Innovación en cada línea de código"</p>
+        <div style="background:var(--mp-card); padding:15px; border-radius:15px; text-align:left; margin-top:20px; border:1px solid var(--mp-border);">
+            <small style="color:var(--mp-accent)">Nombre de usuario</small>
+            <div style="margin-bottom:15px">@noa_dev_studio</div>
+            <small style="color:var(--mp-accent)">Estado</small>
+            <div>Disponible en MpServer</div>
+        </div>
     </main>
 </body>
 </html>
