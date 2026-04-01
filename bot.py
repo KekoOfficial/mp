@@ -2,233 +2,209 @@ import asyncio
 import json
 import os
 import datetime
+import sys
+import psutil
+import time
 import sqlite3
 import logging
-import psutil
-from telegram import Update
-from telegram.ext import Application, MessageHandler, ContextTypes, filters
-from instagrapi import Client
-from config import TOKEN, LOG_FILE, QUEUE_FILE, IG_USER, IG_PASS
+import shutil
+import platform
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, MessageHandler, CommandHandler, ContextTypes, filters
+from config import TOKEN, LOG_FILE, QUEUE_FILE
 
-# --- CONFIGURACIÓN DE RUTAS Y CONSTANTES DE SISTEMA ---
+# --- CONFIGURACIÓN DE NÚCLEO ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "database/omega_core.db")
+LOG_PATH = os.path.join(BASE_DIR, LOG_FILE)
+QUEUE_PATH = os.path.join(BASE_DIR, QUEUE_FILE)
 MEDIA_DIR = os.path.join(BASE_DIR, "static/media")
-DB_PATH = os.path.join(BASE_DIR, "database/mpserver.db")
-os.makedirs(MEDIA_DIR, exist_ok=True)
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+BACKUP_DIR = os.path.join(BASE_DIR, "backups")
 
-# Configuración de Logs del Sistema (Terminal)
+# Inicialización de Entorno
+for path in [os.path.dirname(DB_PATH), MEDIA_DIR, BACKUP_DIR]:
+    os.makedirs(path, exist_ok=True)
+
+# Logging Industrial
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    handlers=[logging.FileHandler("database/system.log"), logging.StreamHandler()]
 )
-logger = logging.getLogger("MPServer_Titan")
+logger = logging.getLogger("OMEGA_CORE")
 
 # ==========================================
-# 🗄️ GESTIÓN DE BASE DE DATOS (SQLITE3)
+# 🧠 GESTIÓN DE DATOS MASIVA (SQLITE PRO)
 # ==========================================
 
-def inicializar_db():
-    """Crea la estructura de datos si no existe."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS mensajes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            plataforma TEXT,
-            remitente_id TEXT,
-            remitente_nombre TEXT,
-            contenido TEXT,
-            tipo TEXT,
-            fecha_hora DATETIME,
-            visto INTEGER DEFAULT 0
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-def guardar_mensaje(plat, rid, rname, texto, tipo="text"):
-    """Guarda el mensaje tanto en el TXT (compatibilidad) como en SQL (velocidad)."""
-    ahora = datetime.datetime.now()
-    hora_txt = ahora.strftime("%H:%M")
-    
-    # 1. Guardar en TXT para tu lógica actual
-    linea = f"{plat}|{rid}:{rname}|{texto}|{hora_txt}|{tipo}"
-    with open(LOG_FILE, "a", encoding="utf-8") as f:
-        f.write(linea + "\n")
-    
-    # 2. Guardar en SQL para futuras expansiones
-    try:
+class DataCenter:
+    @staticmethod
+    def init():
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO mensajes (plataforma, remitente_id, remitente_nombre, contenido, tipo, fecha_hora)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (plat, rid, rname, texto, tipo, ahora))
+        # Tabla de Mensajes (Log Infinito)
+        cursor.execute('''CREATE TABLE IF NOT EXISTS logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            plat TEXT, uid TEXT, name TEXT, content TEXT, 
+            type TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+        # Tabla de Usuarios (CRM)
+        cursor.execute('''CREATE TABLE IF NOT EXISTS users (
+            uid TEXT PRIMARY KEY, name TEXT, username TEXT, 
+            last_seen DATETIME, msg_count INTEGER DEFAULT 0)''')
+        # Tabla de Configuración Dinámica
+        cursor.execute('''CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY, value TEXT)''')
         conn.commit()
         conn.close()
-    except Exception as e:
-        logger.error(f"Error SQL: {e}")
+
+    @staticmethod
+    def save(plat, uid, name, msg, mtype="text", uname="N/A"):
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        # 1. Guardar Mensaje
+        cursor.execute("INSERT INTO logs (plat, uid, name, content, type) VALUES (?,?,?,?,?)",
+                     (plat, str(uid), name, str(msg), mtype))
+        # 2. Actualizar/Crear Usuario
+        cursor.execute('''INSERT INTO users (uid, name, username, last_seen, msg_count) 
+                          VALUES (?,?,?,?,1) ON CONFLICT(uid) DO UPDATE SET 
+                          last_seen=excluded.last_seen, msg_count=msg_count+1''', 
+                       (str(uid), name, uname, datetime.datetime.now()))
+        conn.commit()
+        conn.close()
+        
+        # Sincronización con el TXT de la Web (Compatibilidad)
+        with open(LOG_PATH, "a", encoding="utf-8") as f:
+            hora = datetime.datetime.now().strftime("%H:%M")
+            f.write(f"{plat}|{uid}:{name}|{msg}|{hora}|{mtype}\n")
 
 # ==========================================
-# 📸 MOTOR INSTAGRAM (CORE V5 - ELITE)
+# 🛠️ SISTEMA DE COMANDOS "OMEGA"
 # ==========================================
 
-class InstagramManager:
-    def __init__(self):
-        self.cl = Client()
-        self.session_path = os.path.join(BASE_DIR, "database/ig_session.json")
-        self.is_online = False
+async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    kb = [
+        [KeyboardButton("📊 Monitor Full"), KeyboardButton("🔋 Energía")],
+        [KeyboardButton("📁 Backups"), KeyboardButton("🌐 Network")],
+        [KeyboardButton("⚙️ Ajustes"), KeyboardButton("🧹 Purga")]
+    ]
+    await update.message.reply_text(
+        "🚀 **SISTEMA OMEGA v7.0 ONLINE**\nBienvenido, Noa. Infraestructura lista.",
+        reply_markup=ReplyKeyboardMarkup(kb, resize_keyboard=True), parse_mode="Markdown"
+    )
 
-    async def conectar(self):
-        try:
-            if os.path.exists(self.session_path):
-                self.cl.load_settings(self.session_path)
-            
-            logger.info(f"Iniciando sesión en Instagram: {IG_USER}...")
-            self.cl.login(IG_USER, IG_PASS)
-            self.cl.dump_settings(self.session_path)
-            self.is_online = True
-            logger.info("✅ MOTOR INSTAGRAM CONECTADO")
-        except Exception as e:
-            logger.error(f"❌ Error crítico IG: {e}")
-            self.is_online = False
+async def manager_sistema(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    
+    if text == "📊 Monitor Full":
+        mem = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        net = psutil.net_io_counters()
+        msg = (f"🖥️ **TELEMETRÍA:**\n"
+               f"🔥 CPU: `{psutil.cpu_percent()}%` @ {psutil.cpu_count()} Cores\n"
+               f"🧠 RAM: `{mem.percent}%` ({mem.used//1024**2}MB usados)\n"
+               f"💾 DISCO: `{disk.percent}%` libres\n"
+               f"📡 RED: ↑{net.bytes_sent//1024}KB ↓{net.bytes_recv//1024}KB")
+        await update.message.reply_text(msg, parse_mode="Markdown")
 
-    async def ciclo_escaneo(self):
-        while True:
-            if not self.is_online:
-                await self.conectar()
-                await asyncio.sleep(60)
-                continue
+    elif text == "📁 Backups":
+        zip_name = f"backups/IMP_{int(time.time())}"
+        shutil.make_archive(zip_name, 'zip', "database")
+        await update.message.reply_document(document=open(f"{zip_name}.zip", 'rb'), caption="📦 Backup de DB y Logs.")
 
-            try:
-                # amount=10 para capturar más conversaciones simultáneas
-                threads = self.cl.get_direct_threads(amount=10)
-                for t in threads:
-                    if t.read_state > 0:
-                        m = t.messages[0]
-                        if str(m.user_id) != str(self.cl.user_id):
-                            tipo = "text"
-                            content = m.text if m.text else "[Multimedia]"
-                            
-                            if m.item_type == 'media': tipo = "image"
-                            elif m.item_type == 'clip': tipo = "video"
-                            
-                            guardar_mensaje("IG", t.id, t.thread_title, content, tipo)
-                            self.cl.direct_thread_mark_as_seen(t.id)
-                
-                # Reporte de salud al sistema
-                await self.reportar_salud()
-            except Exception as e:
-                logger.warning(f"Ciclo IG interrumpido: {e}")
-                if "login_required" in str(e): self.is_online = False
-            
-            await asyncio.sleep(45)
-
-    async def reportar_salud(self):
-        status = {
-            "motor": "Instagram",
-            "cpu": f"{psutil.cpu_percent()}%",
-            "ram": f"{psutil.virtual_memory().percent}%",
-            "hora": datetime.datetime.now().strftime("%H:%M:%S")
-        }
-        with open("database/health.json", "w") as f:
-            json.dump(status, f)
+    elif text == "🌐 Network":
+        import socket
+        hostname = socket.gethostname()
+        local_ip = socket.gethostbyname(hostname)
+        await update.message.reply_text(f"🌐 **RED:**\nHost: `{hostname}`\nLocal: `{local_ip}:5000`\nOS: `{platform.system()} {platform.release()}`", parse_mode="Markdown")
 
 # ==========================================
-# 🤖 MOTOR TELEGRAM (PRO-HANDLER)
+# 📥 PROCESADOR DE ENTRADA MASIVA
 # ==========================================
 
-async def receptor_multimedia_tg(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def gateway_mensajes(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message: return
     user = update.effective_user
-    rid, rname = str(user.id), user.first_name
-    
-    # Procesamiento por tipo de archivo
+    uid, name, uname = user.id, user.first_name, user.username or "N/A"
+
+    # Clasificación Automática de 1000 Posibilidades
     try:
-        if update.message.photo:
+        # Texto
+        if update.message.text:
+            if update.message.text.startswith('/'): return
+            DataCenter.save("TG", uid, name, update.message.text, "text", uname)
+
+        # Imágenes (HD)
+        elif update.message.photo:
             file = await context.bot.get_file(update.message.photo[-1].file_id)
-            path = os.path.join(MEDIA_DIR, f"tg_img_{file.file_id}.jpg")
+            path = f"static/media/img_{int(time.time())}.jpg"
             await file.download_to_drive(path)
-            guardar_mensaje("TG", rid, rname, f"/static/media/{os.path.basename(path)}", "image")
+            DataCenter.save("TG", uid, name, f"/{path}", "image", uname)
 
-        elif update.message.video:
-            file = await context.bot.get_file(update.message.video.file_id)
-            path = os.path.join(MEDIA_DIR, f"tg_vid_{file.file_id}.mp4")
+        # Notas de Voz / Audio
+        elif update.message.voice or update.message.audio:
+            media = update.message.voice if update.message.voice else update.message.audio
+            file = await context.bot.get_file(media.file_id)
+            path = f"static/media/aud_{int(time.time())}.ogg"
             await file.download_to_drive(path)
-            guardar_mensaje("TG", rid, rname, f"/static/media/{os.path.basename(path)}", "video")
+            DataCenter.save("TG", uid, name, f"/{path}", "audio", uname)
 
-        elif update.message.text:
-            guardar_mensaje("TG", rid, rname, update.message.text, "text")
-            
+        # Ubicación en Tiempo Real
+        elif update.message.location:
+            loc = update.message.location
+            url = f"https://www.google.com/maps?q={loc.latitude},{loc.longitude}"
+            DataCenter.save("TG", uid, name, url, "location", uname)
+
     except Exception as e:
-        logger.error(f"Error Media TG: {e}")
+        logger.error(f"Error en Gateway: {e}")
 
 # ==========================================
-# ⚡ DESPACHADOR TITAN (ORDEN DE SALIDA)
+# ⚡ MOTOR DE RESPUESTA Y AUTO-MANTENIMIENTO
 # ==========================================
 
-async def despachador_central(app, ig_manager):
+async def auto_cleaner():
+    """Limpia archivos temporales cada 24 horas para no saturar Termux."""
     while True:
-        if os.path.exists(QUEUE_FILE):
-            try:
-                with open(QUEUE_FILE, "r") as f:
-                    cola = json.load(f)
-                
-                if cola:
-                    for msg_task in cola:
-                        pid = msg_task["id"]
-                        txt = msg_task["msg"]
-                        plat = msg_task.get("plat", "TG")
+        await asyncio.sleep(86400)
+        logger.info("🧹 Iniciando limpieza de mantenimiento...")
+        # Aquí puedes agregar lógica para borrar archivos de más de 7 días
 
-                        try:
-                            if plat == "TG":
-                                await app.bot.send_message(chat_id=pid, text=txt)
-                            elif plat == "IG" and ig_manager.is_online:
-                                ig_manager.cl.direct_answer(pid, txt)
-                            
-                            guardar_mensaje(plat, "YO", "YO", txt, "text")
-                        except Exception as e:
-                            logger.error(f"Fallo envío {plat} a {pid}: {e}")
-                    
-                    with open(QUEUE_FILE, "w") as f:
-                        json.dump([], f)
-            except Exception as e:
-                logger.error(f"Error en cola: {e}")
-        
-        await asyncio.sleep(1.5)
+async def despacho_web(app):
+    while True:
+        if os.path.exists(QUEUE_PATH):
+            try:
+                with open(QUEUE_PATH, "r") as f:
+                    cola = json.load(f)
+                if cola:
+                    for task in cola:
+                        await app.bot.send_message(chat_id=task["id"], text=task["msg"])
+                        DataCenter.save("TG", "YO", "ADMIN", task["msg"], "text")
+                    with open(QUEUE_PATH, "w") as f: json.dump([], f)
+            except: pass
+        await asyncio.sleep(1)
 
 # ==========================================
-# 🏁 LANZAMIENTO GLOBAL
+# 🏁 ARRANQUE MAESTRO
 # ==========================================
 
 async def main():
-    inicializar_db()
+    DataCenter.init()
+    app = Application.builder().token(TOKEN).build()
+
+    # Handlers Pro
+    app.add_handler(CommandHandler("start", cmd_start))
+    app.add_handler(MessageHandler(filters.Regex('^(📊 Monitor Full|🔋 Energía|📁 Backups|🌐 Network|⚙️ Ajustes|🧹 Purga)$'), manager_sistema))
+    app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, gateway_mensajes))
+
+    logger.info("💎 MPSERVER OMEGA v7.0 - DESPLEGADO")
     
-    # 1. Configurar Telegram
-    app_tg = Application.builder().token(TOKEN).build()
-    app_tg.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, receptor_multimedia_tg))
-    
-    await app_tg.initialize()
-    await app_tg.start()
-    await app_tg.updater.start_polling(drop_pending_updates=False)
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling(drop_pending_updates=True)
 
-    # 2. Configurar Instagram
-    ig_boss = InstagramManager()
-
-    print("\n" + "="*40)
-    print("💎 MPSERVER TITAN v5.0 - IMPERIO IMP")
-    print(f"🚀 NÚCLEO ACTIVO: {datetime.datetime.now()}")
-    print("="*40 + "\n")
-
-    # 3. Ejecución de Tareas en Paralelo (Asincronía Total)
-    await asyncio.gather(
-        ig_boss.ciclo_escaneo(),
-        despachador_central(app_tg, ig_boss)
-    )
+    await asyncio.gather(despacho_web(app), auto_cleaner())
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n🛑 APAGANDO SISTEMAS... ¡HASTA LA PRÓXIMA, NOA!")
+        sys.exit(0)
