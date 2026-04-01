@@ -1,97 +1,80 @@
+from flask import Flask, render_template, request, jsonify, session, redirect
 import os
 import json
-from flask import Flask, render_template, request, jsonify
-from config import WEB_HOST, WEB_PORT, LOG_FILE, QUEUE_FILE
+from config import WEB_HOST, WEB_PORT, LOG_FILE, QUEUE_FILE, WEB_USER, WEB_PASS
 
 app = Flask(__name__)
+app.secret_key = "mpserver_secure_key_2026"
 
-# Asegurar que las carpetas existan para evitar errores al cargar la web
-os.makedirs("templates", exist_ok=True)
-os.makedirs("static/avatars", exist_ok=True)
+# ==========================================
+# 🔐 SEGURIDAD (MPSERVER LOGIN)
+# ==========================================
 
-# =========================
-# 📂 FUNCIONES DE DATOS
-# =========================
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        user = request.form.get("user")
+        password = request.form.get("pass")
+        # Validamos contra los datos de config.py
+        if user == WEB_USER and password == WEB_PASS:
+            session["logged_in"] = True
+            return redirect("/")
+        return "Acceso Denegado: Credenciales Incorrectas", 401
+    
+    return '''
+    <body style="background:#000; color:#00d2ff; font-family:sans-serif; display:flex; justify-content:center; align-items:center; height:100vh;">
+        <form method="post" style="background:#111; padding:30px; border-radius:15px; border:1px solid #222; width:300px;">
+            <h2 style="text-align:center;">MPSERVER</h2>
+            <input name="user" placeholder="Usuario" style="width:100%; margin:10px 0; padding:12px; background:#000; color:white; border:1px solid #333; border-radius:8px;">
+            <input name="pass" type="password" placeholder="Password" style="width:100%; margin:10px 0; padding:12px; background:#000; color:white; border:1px solid #333; border-radius:8px;">
+            <button type="submit" style="width:100%; padding:12px; background:#00d2ff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; color:#000;">ENTRAR AL PANEL</button>
+        </form>
+    </body>
+    '''
 
-def load_logs():
-    """Lee el archivo de texto donde el Bot guarda los mensajes."""
-    if os.path.exists(LOG_FILE):
-        with open(LOG_FILE, "r", encoding="utf-8") as f:
-            # Retornamos las últimas 100 líneas para no saturar la web
-            return f.readlines()[-100:]
-    return []
+def is_logged():
+    return session.get("logged_in")
 
-def get_queue():
-    """Carga la cola de mensajes pendientes de envío."""
-    if os.path.exists(QUEUE_FILE):
-        try:
-            with open(QUEUE_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except:
-            return []
-    return []
-
-def save_queue(q):
-    """Guarda nuevos mensajes en la cola para que el Bot los procese."""
-    with open(QUEUE_FILE, "w", encoding="utf-8") as f:
-        json.dump(q, f, indent=4)
-
-# =========================
-# 📡 RUTAS DEL PANEL
-# =========================
+# ==========================================
+# 📡 RUTAS MPSERVER
+# ==========================================
 
 @app.route("/")
 def index():
-    """Ventana de chat principal."""
+    if not is_logged(): return redirect("/login")
     return render_template("index.html")
 
 @app.route("/settings")
 def settings():
-    """Bandeja de entrada / Lista de chats."""
+    if not is_logged(): return redirect("/login")
     return render_template("set.html")
-
-# --- RUTAS PARA LAS 10 PÁGINAS EXTRA ---
-# Este bloque maneja perfil.html, grupos.html, etc., de forma automática
-EXTRAS = ["perfil", "grupos", "llamadas", "novedades", "archivados", 
-          "privacidad", "seguridad", "notificaciones", "ayuda", "info"]
-
-@app.route('/<page>')
-def render_custom_pages(page):
-    if page in EXTRAS:
-        return render_template(f"{page}.html")
-    return "Página no encontrada en MpServer", 404
-
-# =========================
-# ⚙️ API (COMUNICACIÓN)
-# =========================
 
 @app.route("/logs")
 def api_logs():
-    """El JS de la web llama aquí para actualizar los mensajes en pantalla."""
-    return jsonify({"logs": load_logs()})
+    if not is_logged(): return jsonify({"error": "unauthorized"}), 401
+    if not os.path.exists(LOG_FILE): return jsonify({"logs": []})
+    with open(LOG_FILE, "r", encoding="utf-8") as f:
+        return jsonify({"logs": f.readlines()[-150:]})
 
 @app.route("/send", methods=["POST"])
 def api_send():
-    """Recibe el mensaje desde la web y lo mete a la cola."""
+    if not is_logged(): return jsonify({"error": "unauthorized"}), 401
     data = request.json
-    if not data or "id" not in data or "msg" not in data:
-        return jsonify({"status": "error", "message": "Datos incompletos"}), 400
+    try:
+        q = json.load(open(QUEUE_FILE)) if os.path.exists(QUEUE_FILE) else []
+    except: q = []
     
-    current_queue = get_queue()
-    current_queue.append({
-        "id": data["id"],
-        "msg": data["msg"]
-    })
-    save_queue(current_queue)
-    
+    q.append({"id": data["id"], "msg": data["msg"]})
+    with open(QUEUE_FILE, "w") as f: json.dump(q, f, indent=4)
     return jsonify({"status": "ok"})
 
-# =========================
-# 🚀 ARRANQUE
-# =========================
+# Manejo de las 10 páginas extra
+EXTRAS = ["perfil", "grupos", "llamadas", "novedades", "archivados", "privacidad", "seguridad", "notificaciones", "ayuda", "info"]
+@app.route('/<page>')
+def custom_pages(page):
+    if not is_logged(): return redirect("/login")
+    if page in EXTRAS: return render_template(f"{page}.html")
+    return "404", 404
 
 if __name__ == "__main__":
-    print(f"🌐 MpServer Web Interface")
-    print(f"🔗 Acceso: http://{WEB_HOST}:{WEB_PORT}")
-    # debug=False y use_reloader=False para evitar conflictos con el Bot.py
-    app.run(host=WEB_HOST, port=WEB_PORT, debug=False, use_reloader=False)
+    app.run(host=WEB_HOST, port=WEB_PORT)
