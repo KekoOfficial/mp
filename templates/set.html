@@ -3,18 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhatsApp</title>
+    <title>MpServer | Panel</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <header class="header">
-        <h2 style="flex:1; margin:0;">WhatsApp</h2>
-        <span>🔍</span> <span onclick="window.location.href='/perfil'">⋮</span>
+        <div class="brand-name">MPSERVER</div>
+        <div style="flex:1"></div>
+        <span onclick="window.location.href='/perfil'" style="font-size:1.5rem; cursor:pointer">⚙️</span>
     </header>
 
     <main class="chat-list" id="chat-list"></main>
 
-    <div class="fab" onclick="window.location.href='/grupos'">➕</div>
+    <nav class="input-area" style="position:fixed; bottom:0; width:100%; background:var(--mp-header); justify-content: space-around;">
+        <span onclick="location.reload()">💬 Chats</span>
+        <span onclick="location.href='/llamadas'">📞 Llamadas</span>
+        <span onclick="location.href='/novedades'">✨ Novedades</span>
+    </nav>
 
     <script>
         async function load() {
@@ -22,18 +27,16 @@
             const data = await res.json();
             const list = document.getElementById("chat-list");
             const users = {};
-
-            data.logs.forEach(line => {
-                const [id, rest] = line.split('|');
+            data.logs.forEach(l => {
+                const [id, rest] = l.split('|');
                 if(rest) users[id] = { name: rest.split(':')[0], msg: rest.split(':')[1] || "..." };
             });
-
             list.innerHTML = Object.entries(users).map(([id, u]) => `
                 <div class="chat-item" onclick="select('${id}', '${u.name}')">
-                    <img src="/static/avatars/${id}.jpg" class="avatar" onerror="this.src='https://ui-avatars.com/api/?name=${u.name}&background=3b4a54&color=fff'">
+                    <img src="/static/avatars/${id}.jpg" class="avatar" onerror="this.src='https://ui-avatars.com/api/?name=${u.name}&background=222&color=fff'">
                     <div style="flex:1">
-                        <div style="display:flex; justify-content:space-between"><b>${u.name}</b> <small>10:00</small></div>
-                        <div style="color:var(--wa-text-dim); font-size:0.9rem">${u.msg}</div>
+                        <div style="display:flex; justify-content:space-between"><b>${u.name}</b></div>
+                        <div style="color:var(--mp-text-dim); font-size:0.85rem">${u.msg}</div>
                     </div>
                 </div>
             `).join('');
