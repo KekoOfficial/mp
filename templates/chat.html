@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INTERFAZ_DE_CONTROL_V10</title>
+    <link rel="stylesheet" href="/static/setchat.css">
+    <style>
+        /* Estilos críticos internos para asegurar el funcionamiento */
+        #status-indicator {
+            font-size: 0.7rem;
+            color: #00f3ff;
+            padding: 5px 20px;
+            background: #000;
+            border-bottom: 1px solid #111;
+            display: flex;
+            justify-content: space-between;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="status-indicator">
+            <span>SISTEMA: V10_TITAN</span>
+            <span>OBJETIVO_ID: {{ cid }}</span>
+            <span id="live-clock">00:00:00</span>
+        </div>
+
+        <div id="chat-box">
+            <div class="loading">INICIALIZANDO PROTOCOLO DE ESCUCHA...</div>
+        </div>
+
+        <div id="input-area">
+            <input type="text" id="m" placeholder="Escribir respuesta al objetivo..." autocomplete="off">
+            <button id="send-btn" onclick="enviarMensaje()">ENVIAR</button>
+        </div>
+    </div>
+
+    <script>
+        const chatID = "{{ cid }}";
+        const chatBox = document.getElementById('chat-box');
+        const inputMsg = document.getElementById('m');
+
+        // Función para cargar y filtrar mensajes
+        async function cargarMensajes() {
+            try {
+                const r = await fetch('/api/stream?t=' + Date.now());
+                const data = await r.text();
+                const lineas = data.trim().split('\n');
+                
+                let contenidoHtml = '';
+
+                lineas.forEach(linea => {
+                    const [plat, user, msg, hora, side] = linea.split('|');
+                    
+                    // Filtrar: Si el mensaje es del usuario actual O si es una salida (OUT) dirigida a este ID
+                    const esMensajeDeEsteChat = user.startsWith(chatID);
+                    const esRespuestaAEsteChat = (side === "OUT" && user.includes(chatID));
+
+                    if (esMensajeDeEsteChat || esRespuestaAEsteChat) {
+                        const clase = (side === "IN") ? "in" : "out";
+                        contenidoHtml += `
+                            <div class="msg ${clase}">
+                                <div class="text">${msg}</div>
+                                <div class="time">${hora}</div>
+                            </div>
+                        `;
+                    }
+                });
+
+                if (contenidoHtml !== chatBox.innerHTML) {
+                    chatBox.innerHTML = contenidoHtml;
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+            } catch (e) {
+                console.error("Error de sincronización V10:", e);
+            }
+        }
+
+        // Función para enviar mensajes
+        async function enviarMensaje() {
+            const mensaje = inputMsg.value.trim();
+            if (!mensaje) return;
+
+            // Bloqueo visual momentáneo
+            inputMsg.disabled = true;
+            
+            try {
+                const response = await fetch('/api/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: chatID,
+                        msg: mensaje
+                    })
+                });
+
+                if (response.ok) {
+                    inputMsg.value = '';
+                    cargarMensajes();
+                }
+            } catch (e) {
+                alert("ERROR DE CONEXIÓN AL NÚCLEO");
+            } finally {
+                inputMsg.disabled = false;
+                inputMsg.focus();
+            }
+        }
+
+        // Eventos de teclado (Enter para enviar)
+        inputMsg.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") enviarMensaje();
+        });
+
+        // Reloj en tiempo real
+        setInterval(() => {
+            document.getElementById('live-clock').innerText = new Date().toLocaleTimeString();
+        }, 1000);
+
+        // Bucle de refresco ultra-rápido (1.2 segundos)
+        setInterval(cargarMensajes, 1200);
+        cargarMensajes();
+    </script>
+</body>
+</html>
