@@ -2,48 +2,64 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>OMEGA_SELECTOR</title>
-    <style>
-        :root { --cyan: #00f3ff; --dark: #050505; }
-        body { background: var(--dark); color: #fff; font-family: sans-serif; margin: 0; }
-        .header { background: #000; padding: 20px; border-bottom: 2px solid var(--cyan); text-align: center; }
-        .chat-list { padding: 20px; display: grid; gap: 15px; max-width: 800px; margin: auto; }
-        .chat-card { background: #111; border: 1px solid #333; padding: 20px; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; transition: 0.3s; }
-        .chat-card:hover { border-color: var(--cyan); box-shadow: 0 0 15px rgba(0,243,255,0.2); transform: scale(1.02); }
-        .user-info .name { display: block; font-size: 18px; color: var(--cyan); font-weight: bold; }
-        .user-info .msg { color: #888; font-size: 14px; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MPSERVER_NET | SELECTOR</title>
+    <link rel="stylesheet" href="/static/set.css">
 </head>
 <body>
-    <div class="header"><h1>CORE_SELECTOR_v8</h1></div>
-    <div id="list" class="chat-list"></div>
+    <div class="scanline"></div>
+    <div class="header">
+        <div class="glitch" data-text="TITAN_CORE_V10">TITAN_CORE_V10</div>
+        <div class="op-tag">OPERADOR: {{ user }}</div>
+    </div>
+
+    <div id="chat-container" class="chat-list">
+        <div class="loading">SINCRONIZANDO FRECUENCIAS...</div>
+    </div>
 
     <script>
-        async function update() {
-            const res = await fetch('/get_logs');
-            const data = await res.text();
-            const lines = data.trim().split('\n');
-            const unique = {};
-            lines.forEach(l => {
-                const [p, u, m, h] = l.split('|');
-                if(p === 'TG' && u !== 'YO') unique[u] = {m, h};
-            });
-            const list = document.getElementById('list');
-            list.innerHTML = '';
-            for(let u in unique) {
-                const [id, name] = u.split(':');
-                list.innerHTML += `
-                    <div class="chat-card" onclick="location.href='/chat/${id}'">
-                        <div class="user-info">
-                            <span class="name">${name}</span>
-                            <span class="msg">${unique[u].m}</span>
-                        </div>
-                        <div style="color:#444">${unique[u].h}</div>
-                    </div>`;
-            }
+        async function updateChats() {
+            try {
+                const r = await fetch('/api/stream?t=' + Date.now());
+                const data = await r.text();
+                const container = document.getElementById('chat-container');
+                const unique = {};
+
+                data.trim().split('\n').forEach(line => {
+                    const [plat, user, msg, hora, side] = line.split('|');
+                    if (side === "IN") {
+                        unique[user] = { msg, hora };
+                    }
+                });
+
+                container.innerHTML = '';
+                const keys = Object.keys(unique).reverse();
+                
+                if (keys.length === 0) {
+                    container.innerHTML = '<div class="empty">ESPERANDO SEÑAL ENTRANTE...</div>';
+                    return;
+                }
+
+                keys.forEach(u => {
+                    const [id, name] = u.split(':');
+                    container.innerHTML += `
+                        <div class="chat-card" onclick="location.href='/chat/${id}'">
+                            <div class="card-glow"></div>
+                            <div class="info">
+                                <span class="name">${name || 'DESCONOCIDO'}</span>
+                                <span class="id">ID: ${id}</span>
+                                <p class="last-msg">${unique[u].msg.substring(0, 40)}...</p>
+                            </div>
+                            <div class="meta">
+                                <span class="time">${unique[u].hora}</span>
+                                <div class="status-dot pulse"></div>
+                            </div>
+                        </div>`;
+                });
+            } catch (e) { console.error("Sync Error", e); }
         }
-        setInterval(update, 3000);
-        update();
+        setInterval(updateChats, 1500);
+        updateChats();
     </script>
 </body>
 </html>
