@@ -1,87 +1,37 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/style.css">
-    <title>MpServer - Selección</title>
-</head>
-<body>
-    <div class="header">
-        <div class="brand-name">MPSERVER SELECTION</div>
-    </div>
+<link rel="stylesheet" href="/static/style.css">
+<div class="header"><b>MPSERVER 🔹 TELEGRAM</b></div>
 
-    <div class="container" style="padding: 15px;">
-        <div class="section-title" style="color: #00d2ff; border-bottom: 1px solid #222; padding-bottom: 5px; margin-bottom: 10px;">
-            🔹 TELEGRAM CHATS
-        </div>
-        <div id="list-tg"></div>
+<div class="menu-tabs">
+    <button class="active" onclick="location.href='/settings'">TELEGRAM</button>
+    <button onclick="location.href='/setig'">INSTAGRAM</button>
+</div>
 
-        <div class="section-title" style="color: #e1306c; border-bottom: 1px solid #222; padding-bottom: 5px; margin: 20px 0 10px 0;">
-            🔸 INSTAGRAM CHATS
-        </div>
-        <div id="list-ig"></div>
-    </div>
+<div id="list-tg" class="chat-list"></div>
 
-    <script>
-        async function loadChats() {
-            const res = await fetch("/logs");
-            const data = await res.json();
-            const tgList = document.getElementById("list-tg");
-            const igList = document.getElementById("list-ig");
-            
-            let usersTG = {};
-            let usersIG = {};
+<script>
+    async function loadTG() {
+        const res = await fetch("/logs");
+        const data = await res.json();
+        const list = document.getElementById("list-tg");
+        let users = {};
 
-            data.logs.forEach(line => {
-                const [plat, user, msg, hora] = line.split('|');
-                if (!user || user === "YO") return;
-
+        data.logs.forEach(line => {
+            const [plat, user, msg, hora] = line.split('|');
+            if(plat === "TG" && user !== "YO") {
                 const [id, name] = user.split(':');
-                
-                if (plat === "TG") {
-                    usersTG[id] = { name: name || id, msg: msg, hora: hora };
-                } else if (plat === "IG") {
-                    usersIG[id] = { name: name || id, msg: msg, hora: hora };
-                }
-            });
-
-            // Renderizar Telegram -> Envía a index.html
-            tgList.innerHTML = Object.entries(usersTG).map(([id, u]) => `
-                <div class="chat-item" onclick="goTo('TG', '${id}', '${u.name}')">
-                    <div class="chat-info">
-                        <strong>${u.name}</strong>
-                        <p>${u.msg.substring(0, 35)}...</p>
-                    </div>
-                    <small>${u.hora}</small>
-                </div>
-            `).join('') || '<p style="color:#555;">No hay chats de Telegram</p>';
-
-            // Renderizar Instagram -> Envía a info.html
-            igList.innerHTML = Object.entries(usersIG).map(([id, u]) => `
-                <div class="chat-item" style="border-left: 4px solid #e1306c;" onclick="goTo('IG', '${id}', '${u.name}')">
-                    <div class="chat-info">
-                        <strong>${u.name}</strong>
-                        <p>${u.msg.substring(0, 35)}...</p>
-                    </div>
-                    <small>${u.hora}</small>
-                </div>
-            `).join('') || '<p style="color:#555;">No hay chats de Instagram</p>';
-        }
-
-        function goTo(plat, id, name) {
-            localStorage.setItem("current_id", id);
-            localStorage.setItem("current_name", name);
-            
-            if (plat === "TG") {
-                window.location.href = "/"; // index.html
-            } else {
-                window.location.href = "/info"; // info.html
+                users[id] = {name, msg, hora};
             }
-        }
+        });
 
-        loadChats();
-        setInterval(loadChats, 5000);
-    </script>
-</body>
-</html>
+        list.innerHTML = Object.entries(users).map(([id, u]) => `
+            <div class="chat-item" onclick="openTG('${id}','${u.name}')">
+                <b>${u.name}</b><br><small>${u.msg}</small>
+            </div>
+        `).join('');
+    }
+    function openTG(id, name) {
+        localStorage.setItem("cid", id); localStorage.setItem("cname", name);
+        window.location.href="/chatelegram";
+    }
+    loadTG(); setInterval(loadTG, 5000);
+</script>
