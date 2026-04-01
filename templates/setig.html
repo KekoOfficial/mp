@@ -1,0 +1,37 @@
+<link rel="stylesheet" href="/static/style.css">
+<div class="header" style="background:#833ab4;"><b>MPSERVER 🔸 INSTAGRAM</b></div>
+
+<div class="menu-tabs">
+    <button onclick="location.href='/settings'">TELEGRAM</button>
+    <button class="active" style="border-bottom:2px solid #e1306c" onclick="location.href='/setig'">INSTAGRAM</button>
+</div>
+
+<div id="list-ig" class="chat-list"></div>
+
+<script>
+    async function loadIG() {
+        const res = await fetch("/logs");
+        const data = await res.json();
+        const list = document.getElementById("list-ig");
+        let users = {};
+
+        data.logs.forEach(line => {
+            const [plat, user, msg, hora] = line.split('|');
+            if(plat === "IG" && user !== "YO") {
+                const [id, name] = user.split(':');
+                users[id] = {name, msg, hora};
+            }
+        });
+
+        list.innerHTML = Object.entries(users).map(([id, u]) => `
+            <div class="chat-item" style="border-left:4px solid #e1306c" onclick="openIG('${id}','${u.name}')">
+                <b>${u.name}</b><br><small>${u.msg}</small>
+            </div>
+        `).join('');
+    }
+    function openIG(id, name) {
+        localStorage.setItem("cid", id); localStorage.setItem("cname", name);
+        window.location.href="/chatig";
+    }
+    loadIG(); setInterval(loadIG, 5000);
+</script>
