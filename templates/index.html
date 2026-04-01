@@ -1,55 +1,59 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat | MpServer</title>
     <link rel="stylesheet" href="/static/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
-<body>
-    <div class="chat-window">
-        <header class="header">
-            <span onclick="location.href='/settings'" style="cursor:pointer; margin-right:15px">◀</span>
-            <img id="h-avatar" class="avatar" style="width:40px; height:40px; border-radius:10px">
-            <div style="margin-left:10px"><b id="h-name">Cargando...</b><br><small style="color:var(--mp-accent)">Online</small></div>
-        </header>
+<body style="display:flex; flex-direction:column; height:100vh;">
+    <div class="header">
+        <span onclick="location.href='/settings'" style="cursor:pointer; margin-right:15px;">◀</span>
+        <b id="chat-name"> Cargando...</b>
+    </div>
 
-        <div class="messages-container" id="msgs"></div>
+    <div id="msgs" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column;"></div>
 
-        <footer class="input-area">
-            <div class="input-box">
-                <input type="text" id="msg-input" placeholder="Escribe un mensaje en MpServer...">
-            </div>
-            <button id="send-btn" onclick="send()">➤</button>
-        </footer>
+    <div class="input-area">
+        <input id="in" placeholder="Escribe un mensaje...">
+        <button onclick="enviar()">➤</button>
     </div>
 
     <script>
-        const cid = localStorage.getItem("selectedChatId");
-        async function fetchMsgs() {
+        const cid = localStorage.getItem("cid");
+        document.getElementById("chat-name").innerText = localStorage.getItem("cname");
+
+        async function update() {
             const res = await fetch("/logs");
             const data = await res.json();
-            const filtered = data.logs.filter(l => l.startsWith(cid + "|"));
-            document.getElementById("msgs").innerHTML = filtered.map(l => `
-                <div class="msg-row"><div class="msg-bubble">${l.split(': ')[1]}</div></div>
-            `).join('');
-            const d = document.getElementById("msgs"); d.scrollTop = d.scrollHeight;
+            const box = document.getElementById("msgs");
+            
+            box.innerHTML = data.logs.filter(l => l.includes(cid) || l.includes("|YO|")).map(line => {
+                const [plat, user, msg, hora] = line.split('|');
+                const isMe = user === "YO";
+                const align = isMe ? "align-self:flex-end; background:#005c4b;" : "align-self:flex-start; background:#222;";
+                
+                let content = msg;
+                if(msg.startsWith("IMG:")) content = `<img src="${msg.split(':')[1]}" style="width:100%; border-radius:8px;">`;
+                if(msg.startsWith("VID:")) content = `<video src="${msg.split(':')[1]}" controls style="width:100%; border-radius:8px;"></video>`;
+
+                return `<div style="${align} color:white; padding:10px; margin:5px; border-radius:12px; max-width:75%; border:1px solid #333;">
+                    ${content} <br><small style="font-size:9px; opacity:0.5; float:right; margin-top:5px;">${hora}</small>
+                </div>`;
+            }).join('');
+            box.scrollTop = box.scrollHeight;
         }
-        async function send() {
-            const i = document.getElementById("msg-input");
-            if(!i.value.trim()) return;
+
+        async function enviar() {
+            const val = document.getElementById("in").value;
+            if(!val) return;
             await fetch("/send", {
-                method: "POST",
-                headers: {"Content-Type":"application/json"},
-                body: JSON.stringify({id: cid, msg: i.value})
+                method:"POST", 
+                headers:{"Content-Type":"application/json"}, 
+                body:JSON.stringify({id:cid, msg:val})
             });
-            i.value = ""; fetchMsgs();
+            document.getElementById("in").value = "";
+            update();
         }
-        window.onload = () => {
-            document.getElementById("h-name").innerText = localStorage.getItem("selectedChatName");
-            document.getElementById("h-avatar").src = `/static/avatars/${cid}.jpg`;
-            fetchMsgs(); setInterval(fetchMsgs, 3000);
-        }
+        setInterval(update, 3000); update();
     </script>
 </body>
 </html>
