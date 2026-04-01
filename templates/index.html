@@ -3,33 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TELEGRAM PANEL PRO</title>
+    <title>NOA | PANEL DE CONTROL</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
-<div class="header">🔥 TELEGRAM PANEL PRO</div>
+<div class="app-container">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>CHATS</h2>
+        </div>
+        <div class="chat-list" id="chat-list">
+            <div class="chat-item loading">Cargando chats...</div>
+        </div>
+    </aside>
 
-<div class="container">
-    <div class="left">
-        <h3>Enviar Mensaje</h3>
-        <input id="id" type="text" placeholder="ID usuario / grupo">
-        <textarea id="msg" placeholder="Escribe tu mensaje aquí..."></textarea>
-        <button onclick="send()">ENVIAR AHORA</button>
-    </div>
+    <main class="chat-area">
+        <header class="chat-header">
+            <div class="selected-info">
+                <span id="current-chat-name">Selecciona un chat</span>
+                <small id="current-chat-id">ID: ---</small>
+            </div>
+        </header>
 
-    <div class="right">
-        <h3>Logs Recientes</h3>
-        <div class="log" id="log"></div>
-    </div>
+        <div class="messages-container" id="log">
+            </div>
+
+        <footer class="input-area">
+            <input type="hidden" id="selected-id">
+            <textarea id="msg-input" placeholder="Escribe un mensaje..." rows="1"></textarea>
+            <button onclick="send()" id="btn-send">
+                <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+            </button>
+        </footer>
+    </main>
 </div>
 
 <script>
-async function send(){
-    const id = document.getElementById("id").value;
-    const msg = document.getElementById("msg").value;
+let lastLogs = [];
 
-    if(!id || !msg) return alert("Rellena todos los campos");
+async function loadData() {
+    try {
+        const res = await fetch("/logs");
+        const data = await res.json();
+        lastLogs = data.logs;
+        updateChatList();
+        renderMessages();
+    } catch (e) { console.error("Error sync:", e); }
+}
+
+function updateChatList() {
+    const listDiv = document.getElementById("chat-list");
+    const uniqueChats = {};
+
+    // Extraer usuarios únicos de los logs (Formato: ID|Nombre: Mensaje)
+    lastLogs.forEach(line => {
+        const parts = line.split('|');
+        if(parts.length > 1) {
+            const id = parts[0];
+            const name = parts[1].split(':')[0];
+            uniqueChats[id] = name;
+        }
+    });
+
+    const selectedId = document.getElementById("selected-id").value;
+    listDiv.innerHTML = "";
+    
+    for (const [id, name] of Object.entries(uniqueChats)) {
+        const item = document.createElement("div");
+        item.className = `chat-item ${id === selectedId ? 'active' : ''}`;
+        item.onclick = () => selectChat(id, name);
+        item.innerHTML = `<strong>${name}</strong><br><small>${id}</small>`;
+        listDiv.appendChild(item);
+    }
+}
+
+function selectChat(id, name) {
+    document.getElementById("selected-id").value = id;
+    document.getElementById("current-chat-name").innerText = name;
+    document.getElementById("current-chat-id").innerText = "ID: " + id;
+    updateChatList();
+    renderMessages();
+}
+
+function renderMessages() {
+    const logDiv = document.getElementById("log");
+    const selectedId = document.getElementById("selected-id").value;
+    
+    if(!selectedId) {
+        logDiv.innerHTML = "<div class='empty-state'>Selecciona un usuario para ver la conversación</div>";
+        return;
+    }
+
+    // Filtrar logs que pertenecen a este ID
+    const filtered = lastLogs.filter(line => line.startsWith(selectedId + "|"));
+    logDiv.innerHTML = filtered.map(line => {
+        const msg = line.split(': ')[1];
+        return `<div class="msg-row"><div class="msg-bubble">${msg}</div></div>`;
+    }).join("");
+    
+    logDiv.scrollTop = logDiv.scrollHeight;
+}
+
+async function send() {
+    const id = document.getElementById("selected-id").value;
+    const msgInput = document.getElementById("msg-input");
+    const msg = msgInput.value;
+
+    if(!id) return alert("Selecciona un chat primero");
+    if(!msg.trim()) return;
 
     await fetch("/send", {
         method: "POST",
@@ -37,26 +119,15 @@ async function send(){
         body: JSON.stringify({id, msg})
     });
 
-    document.getElementById("msg").value = "";
-    loadLogs();
+    msgInput.value = "";
+    // Simular el mensaje enviado visualmente de inmediato
+    const logDiv = document.getElementById("log");
+    logDiv.innerHTML += `<div class="msg-row sent"><div class="msg-bubble">${msg}</div></div>`;
+    logDiv.scrollTop = logDiv.scrollHeight;
 }
 
-async function loadLogs(){
-    try {
-        const res = await fetch("/logs");
-        const data = await res.json();
-        const log Div = document.getElementById("log");
-        
-        logDiv.innerHTML = data.logs.join("<br>");
-        logDiv.scrollTop = logDiv.scrollHeight;
-    } catch (e) {
-        console.error("Error cargando logs");
-    }
-}
-
-setInterval(loadLogs, 2000);
-window.onload = loadLogs;
+setInterval(loadData, 3000);
+window.onload = loadData;
 </script>
-
 </body>
 </html>
