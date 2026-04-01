@@ -3,58 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat</title>
+    <title>Chat | MpServer</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="chat-window">
         <header class="header">
-            <a href="/settings" class="back-btn">←</a>
-            <img id="h-avatar" class="avatar" style="width:40px; height:40px;">
-            <div style="flex:1"><b id="h-name">Nombre</b><br><small>en línea</small></div>
+            <span onclick="location.href='/settings'" style="cursor:pointer; margin-right:15px">◀</span>
+            <img id="h-avatar" class="avatar" style="width:40px; height:40px; border-radius:10px">
+            <div style="margin-left:10px"><b id="h-name">Cargando...</b><br><small style="color:var(--mp-accent)">Online</small></div>
         </header>
 
         <div class="messages-container" id="msgs"></div>
 
         <footer class="input-area">
-            <div class="input-card">
-                <span>😊</span>
-                <textarea id="msg-input" placeholder="Mensaje" rows="1"></textarea>
-                <span>📎</span>
+            <div class="input-box">
+                <input type="text" id="msg-input" placeholder="Escribe un mensaje en MpServer...">
             </div>
             <button id="send-btn" onclick="send()">➤</button>
         </footer>
     </div>
 
     <script>
-        const chatId = localStorage.getItem("selectedChatId");
-        const chatName = localStorage.getItem("selectedChatName");
-
+        const cid = localStorage.getItem("selectedChatId");
         async function fetchMsgs() {
             const res = await fetch("/logs");
             const data = await res.json();
-            const filtered = data.logs.filter(l => l.startsWith(chatId + "|"));
+            const filtered = data.logs.filter(l => l.startsWith(cid + "|"));
             document.getElementById("msgs").innerHTML = filtered.map(l => `
                 <div class="msg-row"><div class="msg-bubble">${l.split(': ')[1]}</div></div>
             `).join('');
             const d = document.getElementById("msgs"); d.scrollTop = d.scrollHeight;
         }
-
         async function send() {
-            const input = document.getElementById("msg-input");
-            if(!input.value.trim()) return;
+            const i = document.getElementById("msg-input");
+            if(!i.value.trim()) return;
             await fetch("/send", {
                 method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({id: chatId, msg: input.value})
+                headers: {"Content-Type":"application/json"},
+                body: JSON.stringify({id: cid, msg: i.value})
             });
-            input.value = ""; fetchMsgs();
+            i.value = ""; fetchMsgs();
         }
-
         window.onload = () => {
-            if(!chatId) return window.location.href="/settings";
-            document.getElementById("h-name").innerText = chatName;
-            document.getElementById("h-avatar").src = `/static/avatars/${chatId}.jpg`;
+            document.getElementById("h-name").innerText = localStorage.getItem("selectedChatName");
+            document.getElementById("h-avatar").src = `/static/avatars/${cid}.jpg`;
             fetchMsgs(); setInterval(fetchMsgs, 3000);
         }
     </script>
