@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NOA | PANEL DE CONTROL</title>
+    <title>TELEGRAM PANEL | CHAT</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -11,123 +11,110 @@
 <div class="app-container">
     <aside class="sidebar">
         <div class="sidebar-header">
+            <a href="/settings" class="nav-btn" title="Ajustes">◀️</a>
             <h2>CHATS</h2>
         </div>
         <div class="chat-list" id="chat-list">
-            <div class="chat-item loading">Cargando chats...</div>
-        </div>
+            </div>
     </aside>
 
     <main class="chat-area">
         <header class="chat-header">
-            <div class="selected-info">
-                <span id="current-chat-name">Selecciona un chat</span>
-                <small id="current-chat-id">ID: ---</small>
+            <div id="selected-chat-info">
+                <span id="chat-name">Selecciona un chat</span>
+                <small id="chat-id">ID: ---</small>
             </div>
         </header>
 
-        <div class="messages-container" id="log">
-            </div>
+        <div class="messages-container" id="log-display">
+            <div class="empty-state">Tus mensajes aparecerán aquí</div>
+        </div>
 
         <footer class="input-area">
-            <input type="hidden" id="selected-id">
+            <input type="hidden" id="current-id">
             <textarea id="msg-input" placeholder="Escribe un mensaje..." rows="1"></textarea>
-            <button onclick="send()" id="btn-send">
-                <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+            <button onclick="sendMessage()" id="send-btn">
+                <span>➤</span>
             </button>
         </footer>
     </main>
 </div>
 
 <script>
-let lastLogs = [];
+let logsData = [];
 
-async function loadData() {
+async function fetchData() {
     try {
         const res = await fetch("/logs");
         const data = await res.json();
-        lastLogs = data.logs;
-        updateChatList();
+        logsData = data.logs;
+        renderChatList();
         renderMessages();
     } catch (e) { console.error("Error sync:", e); }
 }
 
-function updateChatList() {
+function renderChatList() {
     const listDiv = document.getElementById("chat-list");
-    const uniqueChats = {};
+    const uniqueUsers = {};
 
-    // Extraer usuarios únicos de los logs (Formato: ID|Nombre: Mensaje)
-    lastLogs.forEach(line => {
-        const parts = line.split('|');
-        if(parts.length > 1) {
-            const id = parts[0];
-            const name = parts[1].split(':')[0];
-            uniqueChats[id] = name;
+    logsData.forEach(line => {
+        const [id, rest] = line.split('|');
+        if(rest) {
+            const name = rest.split(':')[0];
+            uniqueUsers[id] = name;
         }
     });
 
-    const selectedId = document.getElementById("selected-id").value;
+    const activeId = document.getElementById("current-id").value;
     listDiv.innerHTML = "";
     
-    for (const [id, name] of Object.entries(uniqueChats)) {
+    for (const [id, name] of Object.entries(uniqueUsers)) {
         const item = document.createElement("div");
-        item.className = `chat-item ${id === selectedId ? 'active' : ''}`;
-        item.onclick = () => selectChat(id, name);
+        item.className = `chat-item ${id === activeId ? 'active' : ''}`;
+        item.onclick = () => {
+            document.getElementById("current-id").value = id;
+            document.getElementById("chat-name").innerText = name;
+            document.getElementById("chat-id").innerText = "ID: " + id;
+            renderChatList();
+            renderMessages();
+        };
         item.innerHTML = `<strong>${name}</strong><br><small>${id}</small>`;
         listDiv.appendChild(item);
     }
 }
 
-function selectChat(id, name) {
-    document.getElementById("selected-id").value = id;
-    document.getElementById("current-chat-name").innerText = name;
-    document.getElementById("current-chat-id").innerText = "ID: " + id;
-    updateChatList();
-    renderMessages();
-}
-
 function renderMessages() {
-    const logDiv = document.getElementById("log");
-    const selectedId = document.getElementById("selected-id").value;
+    const display = document.getElementById("log-display");
+    const activeId = document.getElementById("current-id").value;
     
-    if(!selectedId) {
-        logDiv.innerHTML = "<div class='empty-state'>Selecciona un usuario para ver la conversación</div>";
-        return;
-    }
+    if(!activeId) return;
 
-    // Filtrar logs que pertenecen a este ID
-    const filtered = lastLogs.filter(line => line.startsWith(selectedId + "|"));
-    logDiv.innerHTML = filtered.map(line => {
-        const msg = line.split(': ')[1];
+    const filtered = logsData.filter(line => line.startsWith(activeId + "|"));
+    display.innerHTML = filtered.map(line => {
+        const msg = line.split(': ')[1] || "";
         return `<div class="msg-row"><div class="msg-bubble">${msg}</div></div>`;
     }).join("");
     
-    logDiv.scrollTop = logDiv.scrollHeight;
+    display.scrollTop = display.scrollHeight;
 }
 
-async function send() {
-    const id = document.getElementById("selected-id").value;
-    const msgInput = document.getElementById("msg-input");
-    const msg = msgInput.value;
-
-    if(!id) return alert("Selecciona un chat primero");
-    if(!msg.trim()) return;
+async function sendMessage() {
+    const id = document.getElementById("current-id").value;
+    const input = document.getElementById("msg-input");
+    if(!id || !input.value.trim()) return;
 
     await fetch("/send", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({id, msg})
+        body: JSON.stringify({id, msg: input.value})
     });
 
-    msgInput.value = "";
-    // Simular el mensaje enviado visualmente de inmediato
-    const logDiv = document.getElementById("log");
-    logDiv.innerHTML += `<div class="msg-row sent"><div class="msg-bubble">${msg}</div></div>`;
-    logDiv.scrollTop = logDiv.scrollHeight;
+    input.value = "";
+    fetchData();
 }
 
-setInterval(loadData, 3000);
-window.onload = loadData;
+setInterval(fetchData, 3000);
+window.onload = fetchData;
 </script>
 </body>
 </html>
