@@ -1,47 +1,87 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/static/style.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MpServer - Selección</title>
 </head>
 <body>
-    <div class="header"><div class="brand">MPSERVER CHATS</div></div>
-    
-    <div style="padding:15px;">
-        <h3 style="color:#00d2ff;">🔹 TELEGRAM</h3>
+    <div class="header">
+        <div class="brand-name">MPSERVER SELECTION</div>
+    </div>
+
+    <div class="container" style="padding: 15px;">
+        <div class="section-title" style="color: #00d2ff; border-bottom: 1px solid #222; padding-bottom: 5px; margin-bottom: 10px;">
+            🔹 TELEGRAM CHATS
+        </div>
         <div id="list-tg"></div>
 
-        <h3 style="color:#e1306c; margin-top:20px;">🔸 INSTAGRAM</h3>
+        <div class="section-title" style="color: #e1306c; border-bottom: 1px solid #222; padding-bottom: 5px; margin: 20px 0 10px 0;">
+            🔸 INSTAGRAM CHATS
+        </div>
         <div id="list-ig"></div>
     </div>
 
     <script>
-        async function load() {
+        async function loadChats() {
             const res = await fetch("/logs");
             const data = await res.json();
-            const tg = document.getElementById("list-tg");
-            const ig = document.getElementById("list-ig");
-            let uTG = {}, uIG = {};
+            const tgList = document.getElementById("list-tg");
+            const igList = document.getElementById("list-ig");
+            
+            let usersTG = {};
+            let usersIG = {};
 
             data.logs.forEach(line => {
                 const [plat, user, msg, hora] = line.split('|');
-                if(user === "YO") return;
+                if (!user || user === "YO") return;
+
                 const [id, name] = user.split(':');
-                if(plat === "TG") uTG[id] = {name, msg};
-                if(plat === "IG") uIG[id] = {name, msg};
+                
+                if (plat === "TG") {
+                    usersTG[id] = { name: name || id, msg: msg, hora: hora };
+                } else if (plat === "IG") {
+                    usersIG[id] = { name: name || id, msg: msg, hora: hora };
+                }
             });
 
-            tg.innerHTML = Object.entries(uTG).map(([id, u]) => 
-                `<div class="chat-item" onclick="openChat('${id}','${u.name}')"><b>${u.name}</b><br><small>${u.msg.substring(0,30)}</small></div>`).join('');
+            // Renderizar Telegram -> Envía a index.html
+            tgList.innerHTML = Object.entries(usersTG).map(([id, u]) => `
+                <div class="chat-item" onclick="goTo('TG', '${id}', '${u.name}')">
+                    <div class="chat-info">
+                        <strong>${u.name}</strong>
+                        <p>${u.msg.substring(0, 35)}...</p>
+                    </div>
+                    <small>${u.hora}</small>
+                </div>
+            `).join('') || '<p style="color:#555;">No hay chats de Telegram</p>';
+
+            // Renderizar Instagram -> Envía a info.html
+            igList.innerHTML = Object.entries(usersIG).map(([id, u]) => `
+                <div class="chat-item" style="border-left: 4px solid #e1306c;" onclick="goTo('IG', '${id}', '${u.name}')">
+                    <div class="chat-info">
+                        <strong>${u.name}</strong>
+                        <p>${u.msg.substring(0, 35)}...</p>
+                    </div>
+                    <small>${u.hora}</small>
+                </div>
+            `).join('') || '<p style="color:#555;">No hay chats de Instagram</p>';
+        }
+
+        function goTo(plat, id, name) {
+            localStorage.setItem("current_id", id);
+            localStorage.setItem("current_name", name);
             
-            ig.innerHTML = Object.entries(uIG).map(([id, u]) => 
-                `<div class="chat-item" style="border-left:4px solid #e1306c" onclick="openChat('${id}','${u.name}')"><b>${u.name}</b><br><small>${u.msg.substring(0,30)}</small></div>`).join('');
+            if (plat === "TG") {
+                window.location.href = "/"; // index.html
+            } else {
+                window.location.href = "/info"; // info.html
+            }
         }
-        function openChat(id, name){
-            localStorage.setItem("cid", id); localStorage.setItem("cname", name);
-            window.location.href="/";
-        }
-        load();
+
+        loadChats();
+        setInterval(loadChats, 5000);
     </script>
 </body>
 </html>
