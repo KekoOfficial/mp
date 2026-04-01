@@ -1,52 +1,47 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MpServer | Panel</title>
     <link rel="stylesheet" href="/static/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body>
-    <header class="header">
-        <div class="brand-name">MPSERVER</div>
-        <div style="flex:1"></div>
-        <span onclick="window.location.href='/perfil'" style="font-size:1.5rem; cursor:pointer">⚙️</span>
-    </header>
+    <div class="header"><div class="brand">MPSERVER CHATS</div></div>
+    
+    <div style="padding:15px;">
+        <h3 style="color:#00d2ff;">🔹 TELEGRAM</h3>
+        <div id="list-tg"></div>
 
-    <main class="chat-list" id="chat-list"></main>
-
-    <nav class="input-area" style="position:fixed; bottom:0; width:100%; background:var(--mp-header); justify-content: space-around;">
-        <span onclick="location.reload()">💬 Chats</span>
-        <span onclick="location.href='/llamadas'">📞 Llamadas</span>
-        <span onclick="location.href='/novedades'">✨ Novedades</span>
-    </nav>
+        <h3 style="color:#e1306c; margin-top:20px;">🔸 INSTAGRAM</h3>
+        <div id="list-ig"></div>
+    </div>
 
     <script>
         async function load() {
             const res = await fetch("/logs");
             const data = await res.json();
-            const list = document.getElementById("chat-list");
-            const users = {};
-            data.logs.forEach(l => {
-                const [id, rest] = l.split('|');
-                if(rest) users[id] = { name: rest.split(':')[0], msg: rest.split(':')[1] || "..." };
+            const tg = document.getElementById("list-tg");
+            const ig = document.getElementById("list-ig");
+            let uTG = {}, uIG = {};
+
+            data.logs.forEach(line => {
+                const [plat, user, msg, hora] = line.split('|');
+                if(user === "YO") return;
+                const [id, name] = user.split(':');
+                if(plat === "TG") uTG[id] = {name, msg};
+                if(plat === "IG") uIG[id] = {name, msg};
             });
-            list.innerHTML = Object.entries(users).map(([id, u]) => `
-                <div class="chat-item" onclick="select('${id}', '${u.name}')">
-                    <img src="/static/avatars/${id}.jpg" class="avatar" onerror="this.src='https://ui-avatars.com/api/?name=${u.name}&background=222&color=fff'">
-                    <div style="flex:1">
-                        <div style="display:flex; justify-content:space-between"><b>${u.name}</b></div>
-                        <div style="color:var(--mp-text-dim); font-size:0.85rem">${u.msg}</div>
-                    </div>
-                </div>
-            `).join('');
+
+            tg.innerHTML = Object.entries(uTG).map(([id, u]) => 
+                `<div class="chat-item" onclick="openChat('${id}','${u.name}')"><b>${u.name}</b><br><small>${u.msg.substring(0,30)}</small></div>`).join('');
+            
+            ig.innerHTML = Object.entries(uIG).map(([id, u]) => 
+                `<div class="chat-item" style="border-left:4px solid #e1306c" onclick="openChat('${id}','${u.name}')"><b>${u.name}</b><br><small>${u.msg.substring(0,30)}</small></div>`).join('');
         }
-        function select(id, name) {
-            localStorage.setItem("selectedChatId", id);
-            localStorage.setItem("selectedChatName", name);
-            window.location.href = "/";
+        function openChat(id, name){
+            localStorage.setItem("cid", id); localStorage.setItem("cname", name);
+            window.location.href="/";
         }
-        window.onload = load;
+        load();
     </script>
 </body>
 </html>
