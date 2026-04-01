@@ -2,62 +2,106 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Configuración | Panel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp | Chats</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='set.css') }}">
 </head>
 <body>
-    <div class="settings-container">
-        <header class="header">
-            <a href="/" class="nav-btn">◀️</a>
-            <h1>AJUSTES Y CHATS</h1>
-        </header>
 
-        <section class="section">
-            <h3>Seleccionar Chat Activo</h3>
-            <div id="chat-selector-list" class="selector-list">
-                <p>Cargando lista de contactos...</p>
-            </div>
-        </section>
+<div class="app-container">
+    <header class="main-header">
+        <h1>WhatsApp</h1>
+        <div class="header-icons">
+            <span>📷</span>
+            <span>⋮</span>
+        </div>
+    </header>
 
-        <section class="section">
-            <h3>Estado del Sistema</h3>
-            <div class="status-card">
-                <p>Servidor: <span>Activo</span></p>
-                <p>Bot: <span>Online</span></p>
-            </div>
-        </section>
+    <div class="search-container">
+        <div class="search-bar">
+            <span class="search-icon">🔍</span>
+            <input type="text" placeholder="Preguntar a Meta AI o buscar">
+        </div>
     </div>
 
-    <script>
-        async function loadSelector() {
-            const res = await fetch("/logs");
-            const data = await res.json();
-            const listDiv = document.getElementById("chat-selector-list");
-            const uniqueUsers = {};
+    <div class="filters-container">
+        <button class="filter-btn active">Todos</button>
+        <button class="filter-btn">No leídos</button>
+        <button class="filter-btn">Favoritos</button>
+        <button class="filter-btn">Grupos</button>
+    </div>
 
-            data.logs.forEach(line => {
-                const [id, rest] = line.split('|');
-                if(rest) {
-                    const name = rest.split(':')[0];
-                    uniqueUsers[id] = name;
-                }
-            });
+    <main class="chat-list" id="chat-list">
+        <div class="loading">Cargando chats...</div>
+    </main>
 
-            listDiv.innerHTML = "";
-            for (const [id, name] of Object.entries(uniqueUsers)) {
-                const item = document.createElement("div");
-                item.className = "selector-item";
-                item.onclick = () => {
-                    // GUARDAR Y REDIRIGIR
-                    localStorage.setItem("selectedChatId", id);
-                    localStorage.setItem("selectedChatName", name);
-                    window.location.href = "/";
-                };
-                item.innerHTML = `<strong>${name}</strong> <small>ID: ${id}</small>`;
-                listDiv.appendChild(item);
+    <nav class="bottom-nav">
+        <div class="nav-item active">
+            <div class="nav-icon">💬</div>
+            <span>Chats</span>
+        </div>
+        <div class="nav-item">
+            <div class="nav-icon">⭕</div>
+            <span>Novedades</span>
+        </div>
+        <div class="nav-item">
+            <div class="nav-icon">📞</div>
+            <span>Llamadas</span>
+        </div>
+    </nav>
+    
+    <div class="fab">
+        <span>➕</span>
+    </div>
+</div>
+
+<script>
+    async function loadChats() {
+        const res = await fetch("/logs");
+        const data = await res.json();
+        const listDiv = document.getElementById("chat-list");
+        const uniqueUsers = {};
+
+        // Extraer chats únicos de los logs
+        data.logs.forEach(line => {
+            const [id, rest] = line.split('|');
+            if(rest) {
+                const nameParts = rest.split(':');
+                const name = nameParts[0];
+                const lastMsg = nameParts[1] || "";
+                uniqueUsers[id] = { name, lastMsg };
             }
+        });
+
+        listDiv.innerHTML = "";
+        for (const [id, user] of Object.entries(uniqueUsers)) {
+            const item = document.createElement("div");
+            item.className = "chat-item";
+            item.onclick = () => {
+                localStorage.setItem("selectedChatId", id);
+                localStorage.setItem("selectedChatName", user.name);
+                window.location.href = "/"; // Ir al chat
+            };
+
+            item.innerHTML = `
+                <div class="avatar-container">
+                    <div class="avatar-circle"></div>
+                </div>
+                <div class="chat-info">
+                    <div class="chat-top">
+                        <span class="chat-name">${user.name}</span>
+                        <span class="chat-time">2:48</span>
+                    </div>
+                    <div class="chat-bottom">
+                        <span class="chat-msg">${user.lastMsg}</span>
+                    </div>
+                </div>
+            `;
+            listDiv.appendChild(item);
         }
-        window.onload = loadSelector;
-    </script>
+    }
+    window.onload = loadChats;
+</script>
+
 </body>
 </html>
