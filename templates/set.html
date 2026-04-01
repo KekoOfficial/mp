@@ -3,105 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhatsApp | Chats</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='set.css') }}">
+    <title>WhatsApp</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-
-<div class="app-container">
-    <header class="main-header">
-        <h1>WhatsApp</h1>
-        <div class="header-icons">
-            <span>📷</span>
-            <span>⋮</span>
-        </div>
+    <header class="header">
+        <h2 style="flex:1; margin:0;">WhatsApp</h2>
+        <span>🔍</span> <span onclick="window.location.href='/perfil'">⋮</span>
     </header>
 
-    <div class="search-container">
-        <div class="search-bar">
-            <span class="search-icon">🔍</span>
-            <input type="text" placeholder="Preguntar a Meta AI o buscar">
-        </div>
-    </div>
+    <main class="chat-list" id="chat-list"></main>
 
-    <div class="filters-container">
-        <button class="filter-btn active">Todos</button>
-        <button class="filter-btn">No leídos</button>
-        <button class="filter-btn">Favoritos</button>
-        <button class="filter-btn">Grupos</button>
-    </div>
+    <div class="fab" onclick="window.location.href='/grupos'">➕</div>
 
-    <main class="chat-list" id="chat-list">
-        <div class="loading">Cargando chats...</div>
-    </main>
+    <script>
+        async function load() {
+            const res = await fetch("/logs");
+            const data = await res.json();
+            const list = document.getElementById("chat-list");
+            const users = {};
 
-    <nav class="bottom-nav">
-        <div class="nav-item active">
-            <div class="nav-icon">💬</div>
-            <span>Chats</span>
-        </div>
-        <div class="nav-item">
-            <div class="nav-icon">⭕</div>
-            <span>Novedades</span>
-        </div>
-        <div class="nav-item">
-            <div class="nav-icon">📞</div>
-            <span>Llamadas</span>
-        </div>
-    </nav>
-    
-    <div class="fab">
-        <span>➕</span>
-    </div>
-</div>
+            data.logs.forEach(line => {
+                const [id, rest] = line.split('|');
+                if(rest) users[id] = { name: rest.split(':')[0], msg: rest.split(':')[1] || "..." };
+            });
 
-<script>
-    async function loadChats() {
-        const res = await fetch("/logs");
-        const data = await res.json();
-        const listDiv = document.getElementById("chat-list");
-        const uniqueUsers = {};
-
-        // Extraer chats únicos de los logs
-        data.logs.forEach(line => {
-            const [id, rest] = line.split('|');
-            if(rest) {
-                const nameParts = rest.split(':');
-                const name = nameParts[0];
-                const lastMsg = nameParts[1] || "";
-                uniqueUsers[id] = { name, lastMsg };
-            }
-        });
-
-        listDiv.innerHTML = "";
-        for (const [id, user] of Object.entries(uniqueUsers)) {
-            const item = document.createElement("div");
-            item.className = "chat-item";
-            item.onclick = () => {
-                localStorage.setItem("selectedChatId", id);
-                localStorage.setItem("selectedChatName", user.name);
-                window.location.href = "/"; // Ir al chat
-            };
-
-            item.innerHTML = `
-                <div class="avatar-container">
-                    <div class="avatar-circle"></div>
-                </div>
-                <div class="chat-info">
-                    <div class="chat-top">
-                        <span class="chat-name">${user.name}</span>
-                        <span class="chat-time">2:48</span>
-                    </div>
-                    <div class="chat-bottom">
-                        <span class="chat-msg">${user.lastMsg}</span>
+            list.innerHTML = Object.entries(users).map(([id, u]) => `
+                <div class="chat-item" onclick="select('${id}', '${u.name}')">
+                    <img src="/static/avatars/${id}.jpg" class="avatar" onerror="this.src='https://ui-avatars.com/api/?name=${u.name}&background=3b4a54&color=fff'">
+                    <div style="flex:1">
+                        <div style="display:flex; justify-content:space-between"><b>${u.name}</b> <small>10:00</small></div>
+                        <div style="color:var(--wa-text-dim); font-size:0.9rem">${u.msg}</div>
                     </div>
                 </div>
-            `;
-            listDiv.appendChild(item);
+            `).join('');
         }
-    }
-    window.onload = loadChats;
-</script>
-
+        function select(id, name) {
+            localStorage.setItem("selectedChatId", id);
+            localStorage.setItem("selectedChatName", name);
+            window.location.href = "/";
+        }
+        window.onload = load;
+    </script>
 </body>
 </html>
