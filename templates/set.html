@@ -1,18 +1,16 @@
 <link rel="stylesheet" href="/static/style.css">
-<div class="header"><b>MPSERVER 🔹 TELEGRAM</b></div>
-
-<div class="menu-tabs">
+<div class="header"><b>SET TELEGRAM</b></div>
+<div class="tabs">
     <button class="active" onclick="location.href='/settings'">TELEGRAM</button>
     <button onclick="location.href='/setig'">INSTAGRAM</button>
 </div>
-
-<div id="list-tg" class="chat-list"></div>
+<div id="lista" class="list-container"></div>
 
 <script>
-    async function loadTG() {
+    async function cargar() {
         const res = await fetch("/logs");
         const data = await res.json();
-        const list = document.getElementById("list-tg");
+        const box = document.getElementById("lista");
         let users = {};
 
         data.logs.forEach(line => {
@@ -23,15 +21,15 @@
             }
         });
 
-        list.innerHTML = Object.entries(users).map(([id, u]) => `
-            <div class="chat-item" onclick="openTG('${id}','${u.name}')">
+        box.innerHTML = Object.entries(users).map(([id, u]) => `
+            <div class="card" onclick="openChat('${id}','${u.name}')">
                 <b>${u.name}</b><br><small>${u.msg}</small>
             </div>
         `).join('');
     }
-    function openTG(id, name) {
+    function openChat(id, name) {
         localStorage.setItem("cid", id); localStorage.setItem("cname", name);
         window.location.href="/chatelegram";
     }
-    loadTG(); setInterval(loadTG, 5000);
+    cargar(); setInterval(cargar, 5000);
 </script>
