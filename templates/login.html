@@ -1,14 +1,46 @@
-<div class="gateway-container">
-    <h1 class="glitch-text">KHASAM CORE V10</h1>
-    <form action="/panel_admin">
-        <input type="text" placeholder="USUARIO ADMIN" required>
-        <input type="password" placeholder="PASSWORD" required>
-        <button type="submit" class="btn">[ 📡 ] PANEL CONTROL V10</button>
-    </form>
-    
-    <div style="margin: 20px 0; border-top: 1px solid #333;"></div>
-    
-    <button onclick="location.href='/login_global'" class="btn" style="border-color:#00e5ff; color:#00e5ff;">
-        [ 💬 ] IR A LOGIN GLOBAL MP (5.9K)
-    </button>
-</div>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KHASAM CORE | GATEWAY V10</title>
+    <link rel="stylesheet" href="/login.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="scanline"></div>
+    <div class="gateway-container">
+        <div class="system-tag">SISTEMA: KHASAM CORE V10</div>
+        <h1 class="glitch" data-text="IMPERIO MP">IMPERIO MP</h1>
+        
+        <form action="/panel_admin" method="GET">
+            <div class="input-group">
+                <label>OPERADOR ID</label>
+                <input type="text" name="u" placeholder="Admin_V10" required>
+            </div>
+            
+            <div class="input-group">
+                <label>ACCESS KEY</label>
+                <input type="password" name="p" placeholder="••••••••" required>
+            </div>
+
+            <div class="btn-stack">
+                <button type="submit" class="btn btn-primary">
+                    <span class="icon">📡</span> PANEL CONTROL V10
+                </button>
+                
+                <button type="button" onclick="location.href='/login_global'" class="btn btn-secondary">
+                    <span class="icon">🌐</span> GLOBAL CHAT (5.9K)
+                </button>
+            </div>
+        </form>
+
+        <div class="footer-status">
+            MARTÍN MP | FUNDADOR GENERAL<br>
+            <span class="pulse">●</span> ENCRIPTACIÓN ACTIVA
+        </div>
+    </div>
+
+</body>
+</html>
