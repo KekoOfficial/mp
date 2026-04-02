@@ -1,53 +1,25 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>MPSERVER | SELECTOR V10</title>
-    <link rel="stylesheet" href="/static/set.css">
+    <title>MP | ADMIN PANEL V10</title>
+    <link rel="stylesheet" href="/login.css">
+    <style>
+        body { align-items: flex-start; padding: 20px; overflow-y: auto; }
+        .admin-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; width: 100%; }
+        .terminal { background: #000; border: 1px solid var(--primary); height: 400px; padding: 10px; font-size: 12px; overflow-y: scroll; }
+    </style>
 </head>
 <body>
-    <div class="header">
-        <div class="glitch">IMPERIO_IMP_V10</div>
-        <div class="status">OPERADOR: {{ user }} | GLOBAL_LINK: ACTIVE</div>
-    </div>
-
-    <div id="chat-list" class="container">
+    <div class="admin-grid">
+        <div class="mp-card" style="width:auto;">
+            <h1>CONTROL V10</h1>
+            <button class="btn">COMANDO: BAN</button>
+            <button class="btn">COMANDO: MUTE</button>
+            <button class="btn" style="border-color:red; color:red;">APAGADO TOTAL</button>
         </div>
-
-    <script>
-        async function loadChats() {
-            try {
-                const r = await fetch('/api/logs?t=' + Date.now());
-                const data = await r.text();
-                const list = document.getElementById('chat-list');
-                const users = {};
-
-                data.trim().split('\n').forEach(line => {
-                    const parts = line.split('|');
-                    if (parts.length >= 5) {
-                        const [plat, info, msg, hora, side] = parts;
-                        if (side === "IN") {
-                            users[info] = { msg, hora };
-                        }
-                    }
-                });
-
-                list.innerHTML = '';
-                Object.keys(users).reverse().forEach(u => {
-                    const [id, name] = u.split(':');
-                    list.innerHTML += `
-                        <div class="chat-card" onclick="location.href='/chat/${id}'">
-                            <div class="info">
-                                <span class="name">${name}</span>
-                                <span class="last-msg">${users[u].msg.substring(0, 30)}...</span>
-                            </div>
-                            <div class="meta">${users[u].hora}</div>
-                        </div>`;
-                });
-            } catch (e) { console.log("Error sync..."); }
-        }
-        setInterval(loadChats, 2000);
-        loadChats();
-    </script>
+        <div class="terminal" id="term">
+            <span style="color:var(--primary)">[SISTEMA]</span> Esperando señales del bot.py...
+        </div>
+    </div>
 </body>
 </html>
