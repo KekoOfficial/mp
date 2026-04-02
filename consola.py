@@ -1,26 +1,27 @@
 const express = require('express');
-const app = express();
 const path = require('path');
-
-app.use(express.static('static'));
+const app = express();
 app.use(express.json());
+app.use(express.static('static'));
 
-// 1. LA ENTRADA (LOGIN AVANZADO)
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'templates/login.html'));
+// --- RUTAS DE NAVEGACIÓN ---
+
+// Portal de Entrada
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'templates/login.html')));
+
+// Acceso al Segundo Sistema (5.9K)
+app.get('/login_global', (req, res) => res.sendFile(path.join(__dirname, 'templates/login2.html')));
+
+// Dashboards
+app.get('/panel_admin', (req, res) => res.sendFile(path.join(__dirname, 'templates/set.html')));
+app.get('/chat_global', (req, res) => res.sendFile(path.join(__dirname, 'templates/global_chat.html')));
+
+// --- COMUNICACIÓN ENTRE BOTS ---
+app.post('/api/bridge', (req, res) => {
+    const { from, message, target } = req.body;
+    console.log(`[BRIDGE] Mensaje de ${from} hacia ${target}: ${message}`);
+    // Aquí puedes guardar logs o reenviar a bases de datos
+    res.json({ status: "Entregado al núcleo MP" });
 });
 
-// 2. SISTEMA ALFA (Admin V10 - 10 Usuarios)
-app.get('/panel_admin', (req, res) => {
-    // Aquí puedes añadir validación de contraseña después
-    res.sendFile(path.join(__dirname, 'templates/set.html'));
-});
-
-// 3. SISTEMA BETA (Chat Global - 5975 Miembros)
-app.get('/chat_global', (req, res) => {
-    res.sendFile(path.join(__dirname, 'templates/global_chat.html'));
-});
-
-app.listen(process.env.PORT || 4000, () => {
-    console.log("🚀 MULTI-SISTEMA MP ONLINE");
-});
+app.listen(4000, () => console.log("🚀 IMPERIO MP: MULTI-CORE ONLINE (PORT 4000)"));
