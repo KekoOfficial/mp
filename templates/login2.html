@@ -1,11 +1,19 @@
-<div class="login-box" style="border: 2px solid #00e5ff; padding: 40px; background: #000; color: #00e5ff; text-align: center;">
-    <h2 style="letter-spacing: 5px;">GLOBAL MP LOGIN</h2>
-    <p style="font-size: 10px;">ACCESO PARA 5,975 MIEMBROS</p>
-    <form action="/chat_global">
-        <input type="text" placeholder="ID TELEGRAM" style="width:100%; margin:10px 0; background:#111; color:#fff; border:1px solid #00e5ff; padding:10px;">
-        <button type="submit" style="width:100%; padding:15px; background:#00e5ff; color:#000; font-weight:bold; border:none; cursor:pointer;">
-            CONECTAR AL CHAT GLOBAL
-        </button>
-    </form>
-    <button onclick="location.href='/'" style="background:none; border:none; color:#555; margin-top:15px; cursor:pointer;">← Volver al Portal Principal</button>
-</div>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <title>IMPERIO MP | GLOBAL LOGIN</title>
+    <link rel="stylesheet" href="/login.css">
+</head>
+<body>
+    <div class="mp-card global">
+        <h1 style="color:var(--global)">GLOBAL MP</h1>
+        <p style="font-size:10px; text-align:center; color:#555;">ACCESO PARA 5,975 MIEMBROS</p>
+        <div class="input-group">
+            <label>TELEGRAM ID</label>
+            <input type="text" placeholder="ID_NODE" style="color:var(--global)">
+        </div>
+        <button class="btn btn-blue" onclick="location.href='/chat_global'">CONECTAR AL NODO</button>
+        <button class="btn" onclick="location.href='/'" style="border:none; font-size:10px;">← VOLVER AL PORTAL</button>
+    </div>
+</body>
+</html>
