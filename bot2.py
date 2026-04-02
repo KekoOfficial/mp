@@ -1,25 +1,23 @@
-import asyncio
-from telegram import Update
-from telegram.ext import Application, MessageHandler, filters, ContextTypes
-from config import TOKEN_BOT_2 # Necesitas un nuevo Token de BotFather
+import telebot
+import requests
 
-async def chat_masivo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    text = update.message.text
-    
-    # Lógica: Reenviar el mensaje a la interfaz web del Imperio
-    print(f"🌐 [GLOBAL CHAT] {user.first_name}: {text}")
-    
-    # Aquí guardaríamos en una DB o archivo dedicado al Chat Global
-    with open("global_chat.log", "a", encoding="utf-8") as f:
-        f.write(f"{user.id}|{user.first_name}|{text}\n")
+TOKEN_BOT_2 = "TU_TOKEN_BOT_2"
+NODE_SERVER_URL = "http://localhost:4000/api/new_message"
 
-async def main():
-    app = Application.builder().token(TOKEN_BOT_2).build()
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat_masivo))
-    
-    print("🚀 BOT 2: ENGINE GLOBAL (5975 MIEMBROS) ONLINE")
-    await app.run_polling()
+bot = telebot.TeleBot(TOKEN_BOT_2)
 
-if __name__ == "__main__":
-    asyncio.run(main())
+@bot.message_handler(func=lambda message: True)
+def handle_global_chat(message):
+    data = {
+        "user": message.from_user.first_name,
+        "id": message.from_user.id,
+        "text": message.text
+    }
+    # Enviamos el mensaje de los 5.9K miembros al sitio web
+    try:
+        requests.post(NODE_SERVER_URL, json=data)
+    except:
+        print("Error: El servidor de Martín Mp no está escuchando.")
+
+print("🚀 MOTOR 2 (5.9K) INICIADO...")
+bot.polling()
