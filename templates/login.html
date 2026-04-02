@@ -1,46 +1,23 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KHASAM CORE | GATEWAY V10</title>
+    <title>IMPERIO MP | GATEWAY</title>
     <link rel="stylesheet" href="/login.css">
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-
-    <div class="scanline"></div>
-    <div class="gateway-container">
-        <div class="system-tag">SISTEMA: KHASAM CORE V10</div>
-        <h1 class="glitch" data-text="IMPERIO MP">IMPERIO MP</h1>
-        
-        <form action="/panel_admin" method="GET">
-            <div class="input-group">
-                <label>OPERADOR ID</label>
-                <input type="text" name="u" placeholder="Admin_V10" required>
-            </div>
-            
-            <div class="input-group">
-                <label>ACCESS KEY</label>
-                <input type="password" name="p" placeholder="••••••••" required>
-            </div>
-
-            <div class="btn-stack">
-                <button type="submit" class="btn btn-primary">
-                    <span class="icon">📡</span> PANEL CONTROL V10
-                </button>
-                
-                <button type="button" onclick="location.href='/login_global'" class="btn btn-secondary">
-                    <span class="icon">🌐</span> GLOBAL CHAT (5.9K)
-                </button>
-            </div>
-        </form>
-
-        <div class="footer-status">
-            MARTÍN MP | FUNDADOR GENERAL<br>
-            <span class="pulse">●</span> ENCRIPTACIÓN ACTIVA
+    <div class="mp-card">
+        <h1>IMPERIO MP</h1>
+        <div class="input-group">
+            <label>OPERADOR V10</label>
+            <input type="text" id="user" placeholder="Admin_ID">
         </div>
+        <div class="input-group">
+            <label>ACCESS KEY</label>
+            <input type="password" id="pass" placeholder="••••">
+        </div>
+        <button class="btn" onclick="location.href='/panel_admin'">[ 📡 ] PANEL ADMIN</button>
+        <button class="btn btn-blue" onclick="location.href='/login_global'">[ 🌐 ] CHAT GLOBAL (5.9K)</button>
+        <div class="status-bar">MARTÍN MP | <span class="pulse">●</span> ENCRIPTACIÓN V10</div>
     </div>
-
 </body>
 </html>
