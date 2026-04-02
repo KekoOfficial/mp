@@ -1,153 +1,71 @@
 :root {
-    --primary: #00ff41;    /* Verde Matrix */
-    --secondary: #00e5ff;  /* Cian Global */
-    --bg: #050505;
-    --panel: rgba(10, 10, 10, 0.95);
+    --primary: #00ff41;   /* Verde Admin V10 */
+    --global: #00e5ff;    /* Azul Global 5.9K */
+    --bg: #020202;
+    --panel: rgba(15, 15, 15, 0.9);
     --font: 'Fira Code', monospace;
 }
 
 body {
     background-color: var(--bg);
-    color: var(--primary);
+    color: #fff;
     font-family: var(--font);
+    margin: 0;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
-    margin: 0;
     overflow: hidden;
 }
 
-/* Efecto de línea de escaneo */
-.scanline {
-    width: 100%;
-    height: 100px;
-    z-index: 99;
-    background: linear-gradient(0deg, rgba(0, 255, 65, 0) 0%, rgba(0, 255, 65, 0.1) 50%, rgba(0, 255, 65, 0) 100%);
-    opacity: 0.1;
-    position: absolute;
-    bottom: 100%;
-    animation: scan 4s linear infinite;
-}
-
-@keyframes scan {
-    from { bottom: 100%; }
-    to { bottom: -100px; }
-}
-
-.gateway-container {
+/* Contenedor Principal */
+.mp-card {
     background: var(--panel);
     padding: 40px;
-    border: 1px solid #111;
-    border-top: 3px solid var(--primary);
-    box-shadow: 0 0 30px rgba(0,0,0,1);
-    width: 340px;
+    border: 1px solid #222;
+    border-top: 4px solid var(--primary);
+    width: 350px;
+    box-shadow: 0 0 50px rgba(0,0,0,1);
     position: relative;
 }
 
-.system-tag {
-    font-size: 9px;
-    letter-spacing: 2px;
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    opacity: 0.5;
-}
+.mp-card.global { border-top-color: var(--global); }
 
-h1 {
-    font-size: 24px;
-    text-align: center;
-    margin-bottom: 35px;
-}
+h1 { font-size: 22px; text-align: center; letter-spacing: 3px; margin-bottom: 30px; }
 
-/* Grupos de Input */
-.input-group {
-    margin-bottom: 20px;
-}
-
-label {
-    display: block;
-    font-size: 10px;
-    margin-bottom: 6px;
-    color: #555;
-}
-
+/* Inputs Estilo Hacker */
+.input-group { margin-bottom: 20px; }
+label { font-size: 10px; color: #555; display: block; margin-bottom: 5px; }
 input {
     width: 100%;
     padding: 12px;
-    background: #0d0d0d;
-    border: 1px solid #222;
-    color: #fff;
+    background: #000;
+    border: 1px solid #333;
+    color: var(--primary);
     font-family: var(--font);
     box-sizing: border-box;
-    outline: none;
-    transition: 0.3s;
 }
 
-input:focus {
-    border-color: var(--primary);
-    background: #111;
-}
+input:focus { border-color: var(--primary); outline: none; }
 
 /* Botones */
-.btn-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 30px;
-}
-
 .btn {
-    padding: 14px;
-    border: 1px solid var(--primary);
+    width: 100%;
+    padding: 15px;
     background: transparent;
+    border: 1px solid var(--primary);
     color: var(--primary);
-    font-family: var(--font);
-    font-size: 11px;
-    font-weight: bold;
     cursor: pointer;
-    text-transform: uppercase;
+    font-weight: bold;
     transition: 0.3s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    margin-bottom: 10px;
 }
 
-.btn-primary:hover {
-    background: var(--primary);
-    color: #000;
-    box-shadow: 0 0 20px var(--primary);
-}
+.btn:hover { background: var(--primary); color: #000; box-shadow: 0 0 20px var(--primary); }
+.btn-blue { border-color: var(--global); color: var(--global); }
+.btn-blue:hover { background: var(--global); color: #000; box-shadow: 0 0 20px var(--global); }
 
-.btn-secondary {
-    border-color: var(--secondary);
-    color: var(--secondary);
-}
-
-.btn-secondary:hover {
-    background: var(--secondary);
-    color: #000;
-    box-shadow: 0 0 20px var(--secondary);
-}
-
-.icon { margin-right: 10px; }
-
-/* Status Footer */
-.footer-status {
-    margin-top: 30px;
-    text-align: center;
-    font-size: 9px;
-    line-height: 1.5;
-    color: #444;
-}
-
-.pulse {
-    color: var(--primary);
-    animation: pulse-glow 1.5s infinite;
-}
-
-@keyframes pulse-glow {
-    0% { opacity: 0.2; }
-    50% { opacity: 1; }
-    100% { opacity: 0.2; }
-}
+/* Status */
+.status-bar { font-size: 9px; text-align: center; color: #444; margin-top: 20px; }
+.pulse { color: var(--primary); animation: blink 1s infinite; }
+@keyframes blink { 0% { opacity: 0.2; } 50% { opacity: 1; } 100% { opacity: 0.2; } }
